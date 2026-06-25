@@ -1,0 +1,194 @@
+// wardrobe — data model (brief §23)
+// Postgres + Prisma. Deployable to Railway.
+
+generator client {
+  provider      = "prisma-client-js"
+  // include the Debian (bookworm/openssl 3) engine for the Docker runtime
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ItemStatus {
+  owned
+  want
+}
+
+enum SourceType {
+  manual
+  scraped
+}
+
+enum LayoutMode {
+  free
+  grid
+  shelves
+  columns
+  gallery
+}
+
+enum SortKey {
+  recent
+  color
+  section
+  status
+  az
+}
+
+model User {
+  id              String   @id @default(cuid())
+  handle          String   @unique // public, non-secret tag e.g. "moth-7"
+  displayName     String?
+  // auth: "the combination" (brief §24)
+  combinationHash String // argon2id hash of the combination
+  lookupHash      String   @unique // separate salted hash for constant-time lookup
+  recoveryCardHash String? // one-time backup combination
+  recoveryEmail   String?
+  dialPinHash     String? // optional short 2-digit "dial" PIN
+  avatar          String?
+  defaultTheme    String   @default("daylight")
+  createdAt       DateTime @default(now())
+
+  recoveryQuestions RecoveryQuestion[]
+  passkeys          Passkey[]
+  wardrobes         Wardrobe[]
+  sessions          Session[]
+  challenges        WebAuthnChallenge[]
+}
+
+model RecoveryQuestion {
+  id         String @id @default(cuid())
+  userId     String
+  prompt     String
+  answerHash String // argon2id hash of normalized answer
+  order      Int    @default(0)
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Passkey {
+  id           String   @id @default(cuid())
+  userId       String
+  credentialId String   @unique // base64url
+  publicKey    Bytes
+  counter      BigInt   @default(0)
+  transports   String? // comma-separated
+  deviceLabel  String?
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// short-lived WebAuthn challenge store (registration / authentication)
+model WebAuthnChallenge {
+  id        String   @id @default(cuid())
+  userId    String?
+  challenge String
+  kind      String // "register" | "authenticate"
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique // random opaque token stored in httpOnly cookie
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Wardrobe {
+  id         String     @id @default(cuid())
+  ownerId    String
+  title      String     @default("my wardrobe")
+  tagline    String?
+  ground     String     @default("daylight")
+  pattern    String     @default("none")
+  accent     String     @default("cobalt")
+  layoutMode LayoutMode @default(free)
+  sortKey    SortKey    @default(recent)
+  shareCode    String?  @unique
+  visibility   String   @default("private") // private | unlisted
+  shareDetails Boolean  @default(false) // show item info to guest viewers
+  createdAt  DateTime   @default(now())
+
+  owner    User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  sections Section[]
+  items    Item[]
+  stickers Sticker[]
+
+  @@index([ownerId])
+}
+
+model Section {
+  id         String @id @default(cuid())
+  wardrobeId String
+  name       String
+  icon       String?
+  color      String?
+  order      Int    @default(0)
+  shared     Boolean @default(true) // included when the wardrobe is shared
+  wardrobe   Wardrobe @relation(fields: [wardrobeId], references: [id], onDelete: Cascade)
+  items      Item[]
+
+  @@index([wardrobeId])
+}
+
+model Item {
+  id          String     @id @default(cuid())
+  wardrobeId  String
+  sectionId   String?
+  imageUrl    String
+  cutoutUrl   String?
+  sourceUrl   String?
+  name        String
+  brand       String?
+  price       Float?
+  currency    String?    @default("USD")
+  status      ItemStatus @default(owned)
+  // owned fields
+  boughtAt    String? // where bought
+  purchasedAt DateTime?
+  notes       String?
+  // want fields
+  targetPrice Float?
+  priority    Int?
+  // canvas placement
+  posX        Float      @default(0)
+  posY        Float      @default(0)
+  rotation    Float      @default(0)
+  sizeTier    String     @default("medium") // hero | large | medium | small
+  hue         Int        @default(0) // 0-360 for "arrange by color"
+  sourceType  SourceType @default(manual)
+  createdAt   DateTime   @default(now())
+
+  wardrobe Wardrobe @relation(fields: [wardrobeId], references: [id], onDelete: Cascade)
+  section  Section? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+
+  @@index([wardrobeId])
+  @@index([sectionId])
+}
+
+model Sticker {
+  id         String   @id @default(cuid())
+  wardrobeId String
+  kind       String // star | cat | scribble | washi | shrug
+  posX       Float    @default(0)
+  posY       Float    @default(0)
+  rotation   Float    @default(0)
+  scale      Float    @default(1)
+  wardrobe   Wardrobe @relation(fields: [wardrobeId], references: [id], onDelete: Cascade)
+
+  @@index([wardrobeId])
+}

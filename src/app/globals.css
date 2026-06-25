@@ -1,0 +1,210 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------ *
+ *  wardrobe — design tokens (brief §13/§14)
+ *  Calm ground so cutouts sing; accents come from the objects.
+ * ------------------------------------------------------------------ */
+
+:root {
+  /* default ground = Daylight (periwinkle) */
+  --ground: #a9c4f5;
+  --ground-haze: #bcd2f8;
+  --ground-dusk: #9bb8ef;
+
+  --ink: #14161b;
+  --ink-soft: #3a4150;
+  --rule: rgba(20, 22, 27, 0.42);
+  --panel: #eef2fb;
+  --shadow: rgba(36, 54, 96, 0.28);
+  --shadow-strong: rgba(36, 54, 96, 0.4);
+
+  /* object accent set — never large fields */
+  --blush: #f47d7d;
+  --olive: #6f8d5c;
+  --honey: #f2c87d;
+  --brass: #c79a37;
+  --cobalt: #5a82b6;
+  --terracotta: #b9633d;
+
+  --font-display: "Martian Mono", "DM Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-mono: "Spline Sans Mono", "DM Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* selectable grounds — each ships a tuned ink + shadow (brief §13) */
+[data-ground="daylight"] {
+  --ground: #a9c4f5;
+  --ground-haze: #bcd2f8;
+  --ground-dusk: #9bb8ef;
+  --ink: #14161b;
+  --ink-soft: #3a4150;
+  --shadow: rgba(36, 54, 96, 0.28);
+  --shadow-strong: rgba(36, 54, 96, 0.4);
+}
+[data-ground="bone"] {
+  --ground: #f3efe6;
+  --ground-haze: #faf7f0;
+  --ground-dusk: #e7e0d2;
+  --ink: #1d1a14;
+  --ink-soft: #4a443a;
+  --shadow: rgba(80, 70, 50, 0.22);
+  --shadow-strong: rgba(80, 70, 50, 0.34);
+}
+[data-ground="sage"] {
+  --ground: #d7e0cc;
+  --ground-haze: #e6ecdd;
+  --ground-dusk: #c6d2b8;
+  --ink: #19201a;
+  --ink-soft: #42503f;
+  --shadow: rgba(58, 78, 50, 0.22);
+  --shadow-strong: rgba(58, 78, 50, 0.34);
+}
+[data-ground="butter"] {
+  --ground: #f6e6b8;
+  --ground-haze: #fbf1cf;
+  --ground-dusk: #efd99c;
+  --ink: #201c10;
+  --ink-soft: #514a34;
+  --shadow: rgba(120, 96, 30, 0.22);
+  --shadow-strong: rgba(120, 96, 30, 0.34);
+}
+[data-ground="bubblegum"] {
+  --ground: #f4d3de;
+  --ground-haze: #fbe4ec;
+  --ground-dusk: #eec0d0;
+  --ink: #20141a;
+  --ink-soft: #533a45;
+  --shadow: rgba(120, 50, 80, 0.2);
+  --shadow-strong: rgba(120, 50, 80, 0.32);
+}
+[data-ground="slate"] {
+  --ground: #1f2330;
+  --ground-haze: #2a3042;
+  --ground-dusk: #161a24;
+  --ink: #eef1f8;
+  --ink-soft: #aeb6c8;
+  --rule: rgba(238, 241, 248, 0.3);
+  --panel: #2a3042;
+  --shadow: rgba(0, 0, 0, 0.45);
+  --shadow-strong: rgba(0, 0, 0, 0.6);
+}
+
+/* expose tokens to Tailwind utilities (bg-ground, text-ink, …) */
+@theme inline {
+  --color-ground: var(--ground);
+  --color-ground-haze: var(--ground-haze);
+  --color-ground-dusk: var(--ground-dusk);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-rule: var(--rule);
+  --color-panel: var(--panel);
+  --color-blush: var(--blush);
+  --color-olive: var(--olive);
+  --color-honey: var(--honey);
+  --color-brass: var(--brass);
+  --color-cobalt: var(--cobalt);
+  --color-terracotta: var(--terracotta);
+  --font-display: var(--font-display);
+  --font-mono: var(--font-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 16.5px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  transition: background-color 0.5s ease, color 0.3s ease;
+}
+
+/* radial light over the flat ground — gives the canvas depth */
+.ground-field {
+  background:
+    radial-gradient(120% 90% at 50% 18%, var(--ground-haze), transparent 60%),
+    radial-gradient(140% 120% at 50% 120%, var(--ground-dusk), transparent 55%),
+    var(--ground);
+}
+
+/* pattern overlays (brief §17) — low opacity */
+.pattern-grid {
+  background-image:
+    linear-gradient(var(--rule) 1px, transparent 1px),
+    linear-gradient(90deg, var(--rule) 1px, transparent 1px);
+  background-size: 28px 28px;
+  opacity: 0.12;
+}
+.pattern-dots {
+  background-image: radial-gradient(var(--rule) 1.3px, transparent 1.4px);
+  background-size: 22px 22px;
+  opacity: 0.18;
+}
+.pattern-polka {
+  background-image: radial-gradient(var(--ink-soft) 3px, transparent 3.5px);
+  background-size: 46px 46px;
+  opacity: 0.1;
+}
+.pattern-gingham {
+  background-image:
+    linear-gradient(var(--rule) 2px, transparent 2px),
+    linear-gradient(90deg, var(--rule) 2px, transparent 2px);
+  background-size: 18px 18px;
+  opacity: 0.14;
+}
+
+/* clay-like cutout shadow (brief §15) */
+.cutout-shadow {
+  filter: drop-shadow(0 16px 18px var(--shadow));
+  transition: filter 0.25s ease;
+}
+.cutout-shadow:hover {
+  filter: drop-shadow(0 24px 26px var(--shadow-strong));
+}
+
+/* gentle independent float */
+@keyframes float-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--rot, 0deg));
+  }
+  50% {
+    transform: translateY(-13px) rotate(calc(var(--rot, 0deg) + 2deg));
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .floaty {
+    animation: float-bob var(--dur, 7s) ease-in-out infinite;
+    animation-delay: var(--delay, 0s);
+  }
+}
+
+/* thin scrollbars in the directory */
+.thin-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  background: var(--rule);
+  border-radius: 999px;
+}
+
+/* visible focus rings (brief §20) */
+:where(button, a, input, [tabindex]):focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}

@@ -1,0 +1,38 @@
+# Local full-stack: Postgres + wardrobe.
+#   docker compose up --build
+# Then open http://localhost:3000
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: wardrobe
+      POSTGRES_PASSWORD: wardrobe
+      POSTGRES_DB: wardrobe
+    ports:
+      - "5432:5432"
+    volumes:
+      - wardrobe_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wardrobe"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://wardrobe:wardrobe@db:5432/wardrobe
+      LOOKUP_PEPPER: local-dev-pepper-change-me
+      RP_ID: localhost
+      APP_ORIGIN: http://localhost:3000
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+
+volumes:
+  wardrobe_pg:
