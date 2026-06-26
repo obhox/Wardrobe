@@ -5,39 +5,17 @@ import {
   normalizeCombination,
   combinationStrengthOk,
 } from "@/lib/auth/combination";
-import {
-  hashSecret,
-  lookupHash,
-  normalizeAnswer,
-  verifySecret,
-} from "@/lib/auth/crypto";
+import { hashSecret, lookupHash, verifySecret } from "@/lib/auth/crypto";
 import { createSession } from "@/lib/auth/session";
 import { checkRate, recordFailure, recordSuccess } from "@/lib/auth/rate-limit";
 
 export const dynamic = "force-dynamic";
 
-// GET ?handle=moth → the (non-secret) recovery prompts to answer.
-export async function GET(req: NextRequest) {
-  const handle = req.nextUrl.searchParams.get("handle")?.trim().toLowerCase();
-  if (!handle) return NextResponse.json({ error: "handle required" }, { status: 400 });
-
-  const user = await prisma.user.findUnique({
-    where: { handle },
-    include: { recoveryQuestions: { orderBy: { order: "asc" } } },
-  });
-  // don't reveal existence — return empty prompts either way
-  if (!user || user.recoveryQuestions.length === 0) {
-    return NextResponse.json({ prompts: [] });
-  }
-  return NextResponse.json({
-    prompts: user.recoveryQuestions.map((q) => ({ id: q.id, prompt: q.prompt })),
-  });
-}
-
+// Recovery is email-only: a short code is emailed via /api/auth/recover/request,
+// then submitted here with the new combination.
 const schema = z.object({
   handle: z.string().min(1),
-  answers: z.array(z.object({ id: z.string(), answer: z.string() })).optional(),
-  recoveryCard: z.string().optional(),
+  emailCode: z.string().min(1),
   newPhrase: z.string().min(3),
 });
 
@@ -52,7 +30,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid input" }, { status: 400 });
   }
-  const { handle, answers, recoveryCard, newPhrase } = parsed.data;
+  const { handle, emailCode, newPhrase } = parsed.data;
   const key = `recover:${handle.toLowerCase()}`;
 
   const rate = checkRate(key);
@@ -72,35 +50,20 @@ export async function POST(req: NextRequest) {
 
   const user = await prisma.user.findUnique({
     where: { handle: handle.trim().toLowerCase() },
-    include: { recoveryQuestions: true },
   });
   if (!user) {
     recordFailure(key);
     return NextResponse.json({ error: "couldn't recover" }, { status: 401 });
   }
 
-  let passed = false;
-
-  // path A: recovery card
-  if (recoveryCard && user.recoveryCardHash) {
-    passed = await verifySecret(
-      user.recoveryCardHash,
-      normalizeCombination(recoveryCard)
-    );
-  }
-
-  // path B: all secret questions correct (brief §24 — require all)
-  if (!passed && answers && user.recoveryQuestions.length > 0) {
-    const byId = new Map(answers.map((a) => [a.id, a.answer]));
-    const results = await Promise.all(
-      user.recoveryQuestions.map(async (q) => {
-        const given = byId.get(q.id);
-        if (given == null) return false;
-        return verifySecret(q.answerHash, normalizeAnswer(given));
-      })
-    );
-    passed = results.length > 0 && results.every(Boolean);
-  }
+  // verify the short code emailed to the recovery address (single-use, time-boxed)
+  const notExpired =
+    user.recoveryCodeExpiresAt != null &&
+    user.recoveryCodeExpiresAt.getTime() > Date.now();
+  const passed =
+    !!user.recoveryCodeHash &&
+    notExpired &&
+    (await verifySecret(user.recoveryCodeHash, emailCode.trim()));
 
   if (!passed) {
     recordFailure(key);
@@ -123,6 +86,9 @@ export async function POST(req: NextRequest) {
     data: {
       combinationHash: await hashSecret(normalized),
       lookupHash: newLookup,
+      // burn the emailed code so it can't be reused
+      recoveryCodeHash: null,
+      recoveryCodeExpiresAt: null,
     },
   });
   // invalidate old sessions

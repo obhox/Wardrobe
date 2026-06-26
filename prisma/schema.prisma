@@ -42,32 +42,33 @@ model User {
   id              String   @id @default(cuid())
   handle          String   @unique // public, non-secret tag e.g. "moth-7"
   displayName     String?
-  // auth: "the combination" (brief §24)
-  combinationHash String // argon2id hash of the combination
-  lookupHash      String   @unique // separate salted hash for constant-time lookup
-  recoveryCardHash String? // one-time backup combination
-  recoveryEmail   String?
+  // auth: "the combination" (brief §24) — optional, because accounts can also
+  // be created passwordless via an email magic code (no combination set).
+  combinationHash String? // argon2id hash of the combination
+  lookupHash      String?  @unique // separate salted hash for constant-time lookup
+  recoveryEmail   String?  @unique // login + recovery email (magic code is sent here)
+  recoveryCodeHash      String?   // hash of the short-lived emailed reset code
+  recoveryCodeExpiresAt DateTime? // when that emailed code stops working
   dialPinHash     String? // optional short 2-digit "dial" PIN
   avatar          String?
   defaultTheme    String   @default("daylight")
   createdAt       DateTime @default(now())
 
-  recoveryQuestions RecoveryQuestion[]
   passkeys          Passkey[]
   wardrobes         Wardrobe[]
   sessions          Session[]
   challenges        WebAuthnChallenge[]
 }
 
-model RecoveryQuestion {
-  id         String @id @default(cuid())
-  userId     String
-  prompt     String
-  answerHash String // argon2id hash of normalized answer
-  order      Int    @default(0)
-  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
+// passwordless sign-in / sign-up codes, keyed by email (one active per email).
+// Lives independently of User because sign-up happens before a User exists.
+model EmailCode {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  codeHash  String // argon2id hash of the 6-digit code
+  expiresAt DateTime
+  attempts  Int      @default(0) // wrong-code guard
+  createdAt DateTime @default(now())
 }
 
 model Passkey {

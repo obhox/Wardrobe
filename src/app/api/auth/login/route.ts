@@ -35,8 +35,9 @@ export async function POST(req: NextRequest) {
   }
 
   const user = await prisma.user.findUnique({ where: { lookupHash: lh } });
-  // constant-ish time: still run a verify against a dummy when absent
-  const ok = user
+  // email-only accounts have no combination — they can't log in this way.
+  // constant-ish time: still run a verify against a dummy when absent.
+  const ok = user?.combinationHash
     ? await verifySecret(user.combinationHash, normalized)
     : await verifySecret(
         "$argon2id$v=19$m=19456,t=2,p=1$ZHVtbXlzYWx0$" +

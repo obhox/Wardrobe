@@ -20,7 +20,7 @@ export default function ItemDetail() {
       <motion.div
         initial={{ opacity: 0, scale: 0.94 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="relative z-10 grid w-full max-w-2xl grid-cols-1 gap-5 rounded-2xl border border-rule bg-panel p-6 shadow-[0_24px_60px_var(--shadow)] sm:grid-cols-[220px_1fr]"
+        className="thin-scroll relative z-10 grid max-h-[90dvh] w-full max-w-2xl grid-cols-1 gap-5 overflow-y-auto rounded-2xl border border-rule bg-panel p-5 shadow-[0_24px_60px_var(--shadow)] sm:p-6 sm:grid-cols-[220px_1fr]"
       >
         <div className="flex items-center justify-center rounded-xl bg-ground/30 p-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}

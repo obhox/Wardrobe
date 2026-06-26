@@ -1,12 +1,9 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useStore } from "@/lib/store";
-import { api } from "@/lib/api";
 import SectionRow from "./SectionRow";
 
 export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
-  const router = useRouter();
   const payload = useStore((s) => s.payload);
   const filter = useStore((s) => s.filter);
   const setFilter = useStore((s) => s.setFilter);
@@ -23,11 +20,6 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   if (!payload) return null;
   const { wardrobe, sections, items } = payload;
   const unsortedCount = items.filter((i) => !i.sectionId).length;
-
-  async function logout() {
-    await api.post("/api/auth/logout").catch(() => {});
-    router.push("/");
-  }
 
   const chip = (f: typeof filter, label: string) => (
     <button
@@ -138,8 +130,11 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       <div className="flex items-center justify-between border-t border-rule px-4 py-3 text-xs lowercase text-ink-soft">
-        <button onClick={logout} className="underline underline-offset-4 hover:text-ink">
-          lock it
+        <button
+          onClick={() => setPanel("account")}
+          className="underline underline-offset-4 hover:text-ink"
+        >
+          account
         </button>
         <span>wardrobe</span>
       </div>

@@ -28,20 +28,7 @@ async function main() {
       combinationHash: await argon2.hash(DEMO_COMBINATION.trim().toLowerCase()),
       lookupHash: lookupHash(DEMO_COMBINATION),
       defaultTheme: "daylight",
-      recoveryQuestions: {
-        create: [
-          {
-            prompt: "the number you attach to a private memory",
-            answerHash: await argon2.hash("17"),
-            order: 0,
-          },
-          {
-            prompt: "the inside joke word",
-            answerHash: await argon2.hash("pickle"),
-            order: 1,
-          },
-        ],
-      },
+      recoveryEmail: "demo@wardrobe.local",
     },
   });
 

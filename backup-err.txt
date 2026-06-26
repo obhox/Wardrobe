@@ -1,0 +1,33 @@
+Unable to find image 'postgres:18-alpine' locally
+18-alpine: Pulling from library/postgres
+23e013ed837d: Pulling fs layer
+bc703c5f85e3: Pulling fs layer
+4c934735f2d6: Pulling fs layer
+1ebd74850c87: Pulling fs layer
+9502c1ae2e03: Pulling fs layer
+f99868dd8ab4: Pulling fs layer
+d7ed40f595e1: Pulling fs layer
+7fc686db35da: Pulling fs layer
+5de55e5ef9c0: Pulling fs layer
+1ebd74850c87: Download complete
+d7ed40f595e1: Download complete
+f99868dd8ab4: Download complete
+6a391b63458b: Download complete
+23e013ed837d: Download complete
+bc703c5f85e3: Download complete
+4c934735f2d6: Download complete
+7fc686db35da: Download complete
+5de55e5ef9c0: Download complete
+1ebd74850c87: Pull complete
+23e013ed837d: Pull complete
+4c934735f2d6: Pull complete
+5de55e5ef9c0: Pull complete
+0e6770e9240d: Download complete
+9502c1ae2e03: Download complete
+d7ed40f595e1: Pull complete
+f99868dd8ab4: Pull complete
+bc703c5f85e3: Pull complete
+7fc686db35da: Pull complete
+9502c1ae2e03: Pull complete
+Digest: sha256:1b1689b20d16a014a3d195653381cf2caa75a41a92d93b255a9d6ea29fd353aa
+Status: Downloaded newer image for postgres:18-alpine

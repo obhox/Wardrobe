@@ -4,15 +4,14 @@ import { prisma } from "@/lib/db";
 import {
   normalizeCombination,
   combinationStrengthOk,
-  assemble,
   normalizeHandle,
   isValidHandle,
 } from "@/lib/auth/combination";
 import {
   hashSecret,
   lookupHash,
-  normalizeAnswer,
-  randomToken,
+  normalizeEmail,
+  isValidEmail,
 } from "@/lib/auth/crypto";
 import { createSession } from "@/lib/auth/session";
 
@@ -23,10 +22,7 @@ const schema = z.object({
   handle: z.string().min(2).max(30),
   displayName: z.string().max(40).optional(),
   defaultTheme: z.string().default("daylight"),
-  recoveryQuestions: z
-    .array(z.object({ prompt: z.string().min(2), answer: z.string().min(1) }))
-    .max(4)
-    .optional(),
+  recoveryEmail: z.string().max(254).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -41,13 +37,26 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid input" }, { status: 400 });
   }
-  const { phrase, displayName, defaultTheme, recoveryQuestions } = parsed.data;
+  const { phrase, displayName, defaultTheme } = parsed.data;
 
   if (!combinationStrengthOk(phrase)) {
     return NextResponse.json(
       { error: "combination too weak — need 3+ words and a digit" },
       { status: 400 }
     );
+  }
+
+  // optional recovery email — validate only if one was given
+  let recoveryEmail: string | undefined;
+  const rawEmail = parsed.data.recoveryEmail?.trim();
+  if (rawEmail) {
+    if (!isValidEmail(rawEmail)) {
+      return NextResponse.json(
+        { error: "that email doesn't look right" },
+        { status: 400 }
+      );
+    }
+    recoveryEmail = normalizeEmail(rawEmail);
   }
 
   // user-chosen handle (public username)
@@ -80,12 +89,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // recovery card — a one-time longer backup combination
-  const card = assemble(
-    [randomToken(3), randomToken(3), randomToken(3)],
-    Math.floor(Math.random() * 90) + 10
-  ).phrase;
-
   const user = await prisma.user.create({
     data: {
       handle,
@@ -93,18 +96,7 @@ export async function POST(req: NextRequest) {
       defaultTheme,
       combinationHash: await hashSecret(normalized),
       lookupHash: lh,
-      recoveryCardHash: await hashSecret(normalizeCombination(card)),
-      recoveryQuestions: recoveryQuestions
-        ? {
-            create: await Promise.all(
-              recoveryQuestions.map(async (q, i) => ({
-                prompt: q.prompt,
-                answerHash: await hashSecret(normalizeAnswer(q.answer)),
-                order: i,
-              }))
-            ),
-          }
-        : undefined,
+      recoveryEmail,
       wardrobes: {
         create: {
           title: `${handle}'s wardrobe`,
@@ -124,8 +116,5 @@ export async function POST(req: NextRequest) {
 
   await createSession(user.id);
 
-  return NextResponse.json({
-    handle: user.handle,
-    recoveryCard: card, // shown once
-  });
+  return NextResponse.json({ handle: user.handle });
 }

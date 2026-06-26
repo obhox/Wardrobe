@@ -59,13 +59,14 @@ export default function SectionRow({
           className="flex-1 rounded border border-rule bg-ground/40 px-1 outline-none"
         />
       ) : (
-        <button onClick={onSelect} className="flex-1 text-left">
+        <button onClick={onSelect} className="min-w-0 flex-1 truncate text-left">
           {section.name}{" "}
           <span className="tabular text-ink-soft">({section.count ?? 0})</span>
         </button>
       )}
 
-      <span className="ml-auto flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
+      {/* actions: hover-reveal on desktop, always shown on touch devices */}
+      <span className="ml-auto flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100 [@media(hover:none)]:opacity-100">
         <button
           onClick={() => setEditing(true)}
           className="text-xs text-ink-soft hover:text-ink"

@@ -6,7 +6,7 @@ export default function OwnerControls({ onToggleDir }: { onToggleDir: () => void
   const saving = useStore((s) => s.saving);
 
   const btn =
-    "rounded-full border border-rule bg-panel/80 backdrop-blur px-4 py-2 text-sm lowercase shadow-[0_6px_16px_var(--shadow)] transition hover:bg-panel";
+    "rounded-full border border-rule bg-panel/80 backdrop-blur px-3 py-2 text-[13px] lowercase shadow-[0_6px_16px_var(--shadow)] transition hover:bg-panel sm:px-4 sm:text-sm";
 
   return (
     <>
@@ -30,8 +30,11 @@ export default function OwnerControls({ onToggleDir }: { onToggleDir: () => void
         </div>
       )}
 
-      {/* quiet corner controls */}
-      <div data-noshot="true" className="absolute bottom-5 right-5 z-20 flex items-center gap-2">
+      {/* quiet corner controls — wrap (never clip) on narrow screens */}
+      <div
+        data-noshot="true"
+        className="absolute bottom-4 left-3 right-3 z-20 flex flex-wrap items-center justify-end gap-2 sm:bottom-5 sm:left-auto sm:right-5"
+      >
         <button onClick={() => setPanel("share")} className={btn}>
           share
         </button>
@@ -43,7 +46,7 @@ export default function OwnerControls({ onToggleDir }: { onToggleDir: () => void
         </button>
         <button
           onClick={() => setPanel("add")}
-          className="rounded-full bg-ink px-5 py-2 text-sm lowercase text-panel shadow-[0_6px_16px_var(--shadow)] transition hover:opacity-90"
+          className="rounded-full bg-ink px-4 py-2 text-[13px] lowercase text-panel shadow-[0_6px_16px_var(--shadow)] transition hover:opacity-90 sm:px-5 sm:text-sm"
         >
           + add
         </button>

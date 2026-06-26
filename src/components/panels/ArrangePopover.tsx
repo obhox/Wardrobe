@@ -34,7 +34,7 @@ export default function ArrangePopover() {
         initial={{ opacity: 0, y: 10, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         onClick={(e) => e.stopPropagation()}
-        className="absolute bottom-20 right-5 w-64 rounded-2xl border border-rule bg-panel p-4 shadow-[0_18px_44px_var(--shadow)]"
+        className="absolute bottom-24 right-3 w-[min(16rem,calc(100vw-1.5rem))] rounded-2xl border border-rule bg-panel p-4 shadow-[0_18px_44px_var(--shadow)] sm:bottom-20 sm:right-5"
       >
         <div className="text-xs lowercase text-ink-soft">layout</div>
         <div className="mt-2 grid grid-cols-2 gap-1.5">

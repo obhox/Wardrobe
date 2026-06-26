@@ -41,7 +41,18 @@ export function randomToken(bytes = 32): string {
   return crypto.randomBytes(bytes).toString("base64url");
 }
 
-// normalize recovery answers (trim, lowercase, collapse spaces) (brief §24)
-export function normalizeAnswer(answer: string): string {
-  return answer.toLowerCase().replace(/\s+/g, " ").trim();
+// normalize an email for storage/compare (trim + lowercase).
+export function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+// pragmatic email shape check — catches typos, not RFC-perfect.
+export function isValidEmail(email: string): boolean {
+  const e = normalizeEmail(email);
+  return e.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+}
+
+// short numeric reset code emailed to the user (digits only, leading zeros kept).
+export function generateRecoveryCode(digits = 6): string {
+  return crypto.randomInt(10 ** digits).toString().padStart(digits, "0");
 }

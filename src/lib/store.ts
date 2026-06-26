@@ -14,7 +14,7 @@ import type {
 } from "./types";
 
 type Filter = "all" | "owned" | "want";
-type Panel = "add" | "arrange" | "beautify" | "share" | null;
+type Panel = "add" | "arrange" | "beautify" | "share" | "account" | null;
 
 interface State {
   payload: WardrobePayload | null;

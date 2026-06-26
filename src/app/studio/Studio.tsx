@@ -11,6 +11,7 @@ import ItemDetail from "@/components/panels/ItemDetail";
 import ArrangePopover from "@/components/panels/ArrangePopover";
 import BeautifyPanel from "@/components/panels/BeautifyPanel";
 import SharePanel from "@/components/panels/SharePanel";
+import AccountPanel from "@/components/panels/AccountPanel";
 import { STAGE_ID } from "@/lib/screenshot";
 
 export default function Studio({ initial }: { initial: WardrobePayload }) {
@@ -64,6 +65,7 @@ export default function Studio({ initial }: { initial: WardrobePayload }) {
       {openPanel === "add" && <AddItem />}
       {openPanel === "beautify" && <BeautifyPanel />}
       {openPanel === "share" && <SharePanel />}
+      {openPanel === "account" && <AccountPanel />}
       {openPanel === "arrange" && <ArrangePopover />}
       {selectedId && <ItemDetail />}
 

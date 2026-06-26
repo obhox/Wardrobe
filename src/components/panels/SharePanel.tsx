@@ -90,7 +90,7 @@ export default function SharePanel() {
         exit={{ x: 360 }}
         transition={{ type: "spring", stiffness: 320, damping: 34 }}
         onClick={(e) => e.stopPropagation()}
-        className="thin-scroll absolute right-0 top-0 h-full w-[330px] overflow-y-auto border-l border-rule bg-panel p-5 shadow-[-12px_0_40px_var(--shadow)]"
+        className="thin-scroll absolute right-0 top-0 h-full w-full max-w-[330px] overflow-y-auto border-l border-rule bg-panel p-5 shadow-[-12px_0_40px_var(--shadow)]"
       >
         <div className="flex items-center justify-between">
           <h2 className="font-[family-name:var(--font-display)] text-lg lowercase">share</h2>

@@ -125,8 +125,8 @@ export default function AddItem() {
 
       {scrapeMsg && <p className="mt-2 text-xs lowercase text-blush">{scrapeMsg}</p>}
 
-      <div className="mt-4 flex gap-4">
-        <div className="flex h-28 w-28 shrink-0 items-center justify-center rounded-lg border border-rule bg-ground/30">
+      <div className="mt-4 flex flex-col gap-4 sm:flex-row">
+        <div className="flex h-28 w-28 shrink-0 items-center justify-center self-center rounded-lg border border-rule bg-ground/30 sm:self-auto">
           {image ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={image} alt="" className="max-h-24 max-w-24 object-contain cutout-shadow" />
@@ -194,7 +194,7 @@ function Overlay({ children, onClose }: { children: React.ReactNode; onClose: ()
       <motion.div
         initial={{ opacity: 0, scale: 0.96, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="relative z-10 w-full max-w-lg rounded-2xl border border-rule bg-panel p-5 shadow-[0_24px_60px_var(--shadow)]"
+        className="thin-scroll relative z-10 max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-2xl border border-rule bg-panel p-5 shadow-[0_24px_60px_var(--shadow)]"
       >
         {children}
       </motion.div>

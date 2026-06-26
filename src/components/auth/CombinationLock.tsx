@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { startAuthentication } from "@simplewebauthn/browser";
 import { api } from "@/lib/api";
 
-type Mode = "home" | "login" | "create" | "recover";
+type Mode = "home" | "email" | "login" | "create" | "recover";
 
 export default function CombinationLock() {
   const router = useRouter();
@@ -30,6 +30,7 @@ export default function CombinationLock() {
 
         <AnimatePresence mode="wait">
           {mode === "home" && <Home key="home" setMode={setMode} />}
+          {mode === "email" && <EmailMagic key="email" setMode={setMode} onDone={() => router.push("/studio")} />}
           {mode === "login" && <Login key="login" setMode={setMode} onDone={() => router.push("/studio")} />}
           {mode === "create" && <Create key="create" setMode={setMode} onDone={() => router.push("/studio")} />}
           {mode === "recover" && <Recover key="recover" setMode={setMode} onDone={() => router.push("/studio")} />}
@@ -53,16 +54,29 @@ function Home({ setMode }: { setMode: (m: Mode) => void }) {
   return (
     <motion.div {...fade} className="mt-7 flex flex-col gap-3">
       <button
-        onClick={() => setMode("login")}
+        onClick={() => setMode("email")}
         className="rounded-xl bg-ink py-3 text-[15px] lowercase text-panel transition hover:opacity-90"
       >
-        open your wardrobe
+        continue with email ✦
+      </button>
+
+      <div className="my-1 flex items-center gap-3 text-[11px] lowercase text-ink-soft">
+        <span className="h-px flex-1 bg-rule" />
+        or use a combination
+        <span className="h-px flex-1 bg-rule" />
+      </div>
+
+      <button
+        onClick={() => setMode("login")}
+        className="rounded-xl border border-rule py-3 text-[15px] lowercase transition hover:bg-ink/5"
+      >
+        open with a combination
       </button>
       <button
         onClick={() => setMode("create")}
         className="rounded-xl border border-rule py-3 text-[15px] lowercase transition hover:bg-ink/5"
       >
-        make a new one
+        make one with a combination
       </button>
       <button
         onClick={() => setMode("recover")}
@@ -70,6 +84,103 @@ function Home({ setMode }: { setMode: (m: Mode) => void }) {
       >
         lost your combination?
       </button>
+    </motion.div>
+  );
+}
+
+function EmailMagic({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: () => void }) {
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [sent, setSent] = useState(false);
+  const [note, setNote] = useState("");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function requestCode() {
+    setBusy(true);
+    setErr("");
+    setNote("");
+    try {
+      await api.post("/api/auth/email/request", { email });
+      setSent(true);
+      setNote(`we sent a 6-digit code to ${email}. it's good for 15 minutes.`);
+    } catch (e) {
+      setErr((e as Error).message);
+    }
+    setBusy(false);
+  }
+
+  async function verify() {
+    setBusy(true);
+    setErr("");
+    try {
+      await api.post("/api/auth/email/verify", { email, code });
+      onDone();
+    } catch (e) {
+      setErr((e as Error).message);
+      setBusy(false);
+    }
+  }
+
+  return (
+    <motion.div {...fade} className="mt-7 flex flex-col gap-3">
+      <label className="text-xs lowercase text-ink-soft">your email</label>
+      <Field
+        type="email"
+        inputMode="email"
+        autoComplete="email"
+        autoFocus
+        placeholder="you@example.com"
+        value={email}
+        onChange={(e) => setEmail(e.target.value.trim())}
+        onKeyDown={(e) => e.key === "Enter" && !sent && email && requestCode()}
+        className="lowercase"
+      />
+
+      {!sent ? (
+        <button
+          disabled={busy || email.length < 3}
+          onClick={requestCode}
+          className="rounded-xl bg-ink py-3 text-[15px] lowercase text-panel transition hover:opacity-90 disabled:opacity-40"
+        >
+          {busy ? "sending…" : "email me a code ✦"}
+        </button>
+      ) : (
+        <>
+          <label className="text-xs lowercase text-ink-soft">enter the 6-digit code</label>
+          <Field
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            autoFocus
+            placeholder="• • • • • •"
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            onKeyDown={(e) => e.key === "Enter" && code.length === 6 && verify()}
+            className="tracking-[0.3em]"
+          />
+          <button
+            disabled={busy || code.length < 6}
+            onClick={verify}
+            className="rounded-xl bg-ink py-3 text-[15px] lowercase text-panel transition hover:opacity-90 disabled:opacity-40"
+          >
+            {busy ? "opening…" : "open my wardrobe ✦"}
+          </button>
+          <button
+            onClick={requestCode}
+            disabled={busy}
+            className="text-xs lowercase text-ink-soft underline underline-offset-4 disabled:opacity-40"
+          >
+            resend the code
+          </button>
+        </>
+      )}
+
+      {note && <p className="text-xs lowercase text-ink-soft">{note}</p>}
+      <p className="text-[11px] lowercase text-ink-soft">
+        new here? this makes your wardrobe. already have one on this email? it opens it.
+      </p>
+      {err && <p className="text-xs text-blush lowercase">{err}</p>}
+      <BackRow setMode={setMode} />
     </motion.div>
   );
 }
@@ -151,11 +262,7 @@ function Create({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: () =>
   const [combo, setCombo] = useState<{ phrase: string; handle: string } | null>(null);
   const [handle, setHandle] = useState("");
   const [handleTouched, setHandleTouched] = useState(false);
-  const [q1, setQ1] = useState("");
-  const [a1, setA1] = useState("");
-  const [q2, setQ2] = useState("");
-  const [a2, setA2] = useState("");
-  const [card, setCard] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -176,39 +283,16 @@ function Create({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: () =>
     setBusy(true);
     setErr("");
     try {
-      const recoveryQuestions = [];
-      if (q1 && a1) recoveryQuestions.push({ prompt: q1, answer: a1 });
-      if (q2 && a2) recoveryQuestions.push({ prompt: q2, answer: a2 });
-      const res = await api.post("/api/auth/register", {
+      await api.post("/api/auth/register", {
         phrase: combo.phrase,
         handle,
-        recoveryQuestions,
+        recoveryEmail: email.trim() || undefined,
       });
-      setCard(res.recoveryCard);
+      onDone();
     } catch (e) {
       setErr((e as Error).message);
       setBusy(false);
     }
-  }
-
-  if (card) {
-    return (
-      <motion.div {...fade} className="mt-7 flex flex-col gap-3">
-        <p className="text-sm lowercase">your spare key — screenshot this.</p>
-        <div className="rounded-lg border border-rule bg-ground/40 px-3 py-3 font-[family-name:var(--font-display)] text-sm">
-          {card}
-        </div>
-        <p className="text-xs lowercase text-ink-soft">
-          it&apos;s a one-time backup combination. keep it somewhere safe.
-        </p>
-        <button
-          onClick={onDone}
-          className="rounded-xl bg-ink py-3 text-[15px] lowercase text-panel transition hover:opacity-90"
-        >
-          enter your wardrobe →
-        </button>
-      </motion.div>
-    );
   }
 
   return (
@@ -241,20 +325,22 @@ function Create({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: () =>
         />
       </div>
 
-      <details className="mt-1 rounded-lg border border-rule px-3 py-2">
-        <summary className="cursor-pointer text-xs lowercase text-ink-soft">
-          add recovery questions (optional, recommended)
-        </summary>
-        <div className="mt-3 flex flex-col gap-2">
-          <Field placeholder="a private prompt only you'd know" value={q1} onChange={(e) => setQ1(e.target.value)} />
-          <Field placeholder="answer" value={a1} onChange={(e) => setA1(e.target.value)} />
-          <Field placeholder="a second prompt" value={q2} onChange={(e) => setQ2(e.target.value)} />
-          <Field placeholder="answer" value={a2} onChange={(e) => setA2(e.target.value)} />
-          <p className="text-[11px] lowercase text-ink-soft">
-            make these obscure — not maiden name or first pet.
-          </p>
-        </div>
-      </details>
+      <label className="mt-1 text-xs lowercase text-ink-soft">
+        email — your way back in (recommended)
+      </label>
+      <Field
+        type="email"
+        inputMode="email"
+        autoComplete="email"
+        placeholder="you@example.com"
+        value={email}
+        onChange={(e) => setEmail(e.target.value.trim())}
+        className="lowercase"
+      />
+      <p className="-mt-1 text-[11px] lowercase text-ink-soft">
+        if you ever lose your combination, this is the only way we can let you
+        back in — we just email a reset code. nothing else.
+      </p>
 
       {err && <p className="text-xs text-blush lowercase">{err}</p>}
       <button
@@ -271,21 +357,22 @@ function Create({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: () =>
 
 function Recover({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: () => void }) {
   const [handle, setHandle] = useState("");
-  const [prompts, setPrompts] = useState<{ id: string; prompt: string }[]>([]);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [card, setCard] = useState("");
+  const [code, setCode] = useState("");
+  const [emailSent, setEmailSent] = useState(false);
   const [newPhrase, setNewPhrase] = useState("");
+  const [note, setNote] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
-  const [loaded, setLoaded] = useState(false);
 
-  async function lookup() {
+  // email a reset code to the address on file — the only way back in
+  async function emailCode() {
     setBusy(true);
     setErr("");
+    setNote("");
     try {
-      const res = await api.get(`/api/auth/recover?handle=${encodeURIComponent(handle)}`);
-      setPrompts(res.prompts);
-      setLoaded(true);
+      await api.post("/api/auth/recover/request", { handle });
+      setEmailSent(true);
+      setNote("if an email is on file, a reset code is on its way. it's good for 15 minutes.");
     } catch (e) {
       setErr((e as Error).message);
     }
@@ -298,8 +385,7 @@ function Recover({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: () =
     try {
       await api.post("/api/auth/recover", {
         handle,
-        answers: prompts.map((p) => ({ id: p.id, answer: answers[p.id] ?? "" })),
-        recoveryCard: card || undefined,
+        emailCode: code.trim(),
         newPhrase,
       });
       onDone();
@@ -312,38 +398,40 @@ function Recover({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: () =
   return (
     <motion.div {...fade} className="mt-7 flex flex-col gap-3">
       <label className="text-xs lowercase text-ink-soft">your handle</label>
-      <div className="flex gap-2">
-        <Field placeholder="moth" value={handle} onChange={(e) => setHandle(e.target.value)} />
-        <button
-          onClick={lookup}
-          disabled={busy || !handle}
-          className="rounded-lg border border-rule px-3 text-sm lowercase transition hover:bg-ink/5 disabled:opacity-40"
-        >
-          find
-        </button>
-      </div>
+      <Field
+        placeholder="moth"
+        value={handle}
+        onChange={(e) => setHandle(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && handle && emailCode()}
+      />
 
-      {loaded && (
+      <button
+        onClick={emailCode}
+        disabled={busy || !handle}
+        className="rounded-xl bg-ink py-3 text-[15px] lowercase text-panel transition hover:opacity-90 disabled:opacity-40"
+      >
+        {busy && !emailSent ? "sending…" : emailSent ? "resend code" : "email me a reset code ✦"}
+      </button>
+
+      {emailSent && (
         <>
-          {prompts.map((p) => (
-            <div key={p.id} className="flex flex-col gap-1">
-              <span className="text-xs lowercase text-ink-soft">{p.prompt}</span>
-              <Field
-                value={answers[p.id] ?? ""}
-                onChange={(e) => setAnswers((a) => ({ ...a, [p.id]: e.target.value }))}
-              />
-            </div>
-          ))}
           <div className="flex flex-col gap-1">
-            <span className="text-xs lowercase text-ink-soft">…or your recovery card</span>
-            <Field placeholder="spare-key combination" value={card} onChange={(e) => setCard(e.target.value)} />
+            <span className="text-xs lowercase text-ink-soft">enter the 6-digit code from your email</span>
+            <Field
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="• • • • • •"
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              className="tracking-[0.3em]"
+            />
           </div>
           <div className="flex flex-col gap-1">
             <span className="text-xs lowercase text-ink-soft">set a new combination</span>
             <Field placeholder="wool · sage · wren · 4" value={newPhrase} onChange={(e) => setNewPhrase(e.target.value)} />
           </div>
           <button
-            disabled={busy || newPhrase.trim().length < 3}
+            disabled={busy || code.length < 6 || newPhrase.trim().length < 3}
             onClick={reset}
             className="rounded-xl bg-ink py-3 text-[15px] lowercase text-panel transition hover:opacity-90 disabled:opacity-40"
           >
@@ -351,6 +439,12 @@ function Recover({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: () =
           </button>
         </>
       )}
+
+      {note && <p className="text-xs lowercase text-ink-soft">{note}</p>}
+      <p className="text-[11px] lowercase text-ink-soft">
+        no email on your account? it can&apos;t be recovered — that&apos;s the
+        trade for staying email-free.
+      </p>
 
       {err && <p className="text-xs text-blush lowercase">{err}</p>}
       <BackRow setMode={setMode} />

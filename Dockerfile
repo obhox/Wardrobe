@@ -16,7 +16,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma
-RUN npm ci
+# Use `npm install` rather than `npm ci`: the eslint-config-next -> @unrs/resolver
+# transitive chain ships a nested @emnapi/* wasm tree that npm's lockfile format
+# can't reconcile for `npm ci` (npm install/ci disagree). `npm install` is tolerant.
+RUN npm install --no-audit --no-fund
 
 # ---- builder: generate Prisma client + build Next ----
 FROM base AS builder
@@ -44,11 +47,11 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
-# Prisma runtime: generated client, engines, CLI, and schema (for migrations)
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+# Full node_modules so the Prisma CLI (db push / migrate deploy) has its complete
+# dependency tree at runtime. The standalone output only traces deps imported by
+# the app, which omits CLI-only deps like `effect`/`c12` that @prisma/config needs.
+# This copy is a superset of the standalone server's traced node_modules.
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/prisma ./prisma
 
 COPY docker-entrypoint.sh ./docker-entrypoint.sh

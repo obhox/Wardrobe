@@ -35,6 +35,7 @@ export interface SessionUser {
   handle: string;
   displayName: string | null;
   defaultTheme: string;
+  email: string | null;
 }
 
 export async function getCurrentUser(): Promise<SessionUser | null> {
@@ -56,6 +57,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     handle: user.handle,
     displayName: user.displayName,
     defaultTheme: user.defaultTheme,
+    email: user.recoveryEmail,
   };
 }
 
