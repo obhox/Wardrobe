@@ -12,5 +12,10 @@ export default async function StudioPage() {
   const payload = await loadWardrobe(user.id);
   if (!payload) redirect("/");
 
-  return <Studio initial={payload} />;
+  return (
+    <Studio
+      initial={payload}
+      user={{ id: user.id, email: user.email }}
+    />
+  );
 }

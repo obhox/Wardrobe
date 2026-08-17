@@ -14,7 +14,18 @@ import SharePanel from "@/components/panels/SharePanel";
 import AccountPanel from "@/components/panels/AccountPanel";
 import { STAGE_ID } from "@/lib/screenshot";
 
-export default function Studio({ initial }: { initial: WardrobePayload }) {
+interface StudioUser {
+  id: string;
+  email: string | null;
+}
+
+export default function Studio({
+  initial,
+  user,
+}: {
+  initial: WardrobePayload;
+  user: StudioUser;
+}) {
   const init = useStore((s) => s.init);
   const payload = useStore((s) => s.payload);
   const openPanel = useStore((s) => s.openPanel);
@@ -32,6 +43,16 @@ export default function Studio({ initial }: { initial: WardrobePayload }) {
     if (!payload) return;
     document.documentElement.dataset.ground = payload.wardrobe.theme.ground;
   }, [payload]);
+
+  // identify the logged-in user with Falorb so activity is unified across
+  // projects. recoveryEmail is optional (this app supports anonymous,
+  // email-less accounts by design), so fall back to id-only identification.
+  useEffect(() => {
+    if (typeof window === "undefined" || !user?.id) return;
+    const falorb = (window as any).falorb;
+    if (!falorb) return;
+    falorb.identify(user.id, user.email ? { email: user.email } : undefined);
+  }, [user?.id]);
 
   if (!payload) return null;
   const { theme } = payload.wardrobe;
