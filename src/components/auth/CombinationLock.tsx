@@ -288,6 +288,9 @@ function Create({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: () =>
         handle,
         recoveryEmail: email.trim() || undefined,
       });
+      if (typeof window !== "undefined" && (window as any).falorb) {
+        (window as any).falorb.track("account_created");
+      }
       onDone();
     } catch (e) {
       setErr((e as Error).message);
