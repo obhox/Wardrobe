@@ -86,6 +86,9 @@ export default function AddItem() {
       rotation: (Math.random() - 0.5) * 24,
       sourceType: tab === "link" ? "scraped" : "manual",
     });
+    if (typeof window !== "undefined" && (window as any).falorb) {
+      (window as any).falorb.track("item_added", { status, sourceType: tab === "link" ? "scraped" : "manual" });
+    }
     setPanel(null);
   }
 

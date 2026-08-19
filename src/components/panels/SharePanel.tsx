@@ -30,6 +30,9 @@ export default function SharePanel() {
     setNote(null);
     try {
       await setShare(enabled);
+      if (enabled && typeof window !== "undefined" && (window as any).falorb) {
+        (window as any).falorb.track("wardrobe_shared");
+      }
     } catch {
       setNote("couldn't update sharing — try again.");
     } finally {
