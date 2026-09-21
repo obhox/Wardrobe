@@ -1,6 +1,6 @@
-// Currencies offered in the picker. `Item.currency` stores either one of these
-// ISO codes, any other ISO code (e.g. from a scraped page), or a custom symbol
-// the user typed in (max 8 chars, matching the API schema).
+// Currencies offered in the picker. `Item.currency` stores one of these ISO
+// codes, or another ISO code picked up from an imported page. Older items may
+// hold a free-text symbol from before custom currencies were removed.
 
 export const CURRENCIES = [
   { code: "USD", symbol: "$", label: "us dollar" },
@@ -12,7 +12,6 @@ export const CURRENCIES = [
 ] as const;
 
 export const DEFAULT_CURRENCY = "USD";
-export const CUSTOM_SYMBOL_MAX = 8;
 
 const LAST_KEY = "wardrobe:last-currency";
 
