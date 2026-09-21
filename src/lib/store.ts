@@ -85,7 +85,8 @@ export const useStore = create<State>((set, get) => ({
     set((s) => {
       if (!s.payload) return s;
       const payload = { ...s.payload, items: [...s.payload.items, created] };
-      return { payload: { ...payload, sections: recount(payload) }, selectedId: created.id };
+      // just close the add panel — don't pop the new item's detail panel open
+      return { payload: { ...payload, sections: recount(payload) } };
     });
   },
 

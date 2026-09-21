@@ -1,6 +1,8 @@
 // Client-side dominant-hue extraction for "arrange by color" (brief §16).
 // Samples the image on a tiny canvas and returns a 0..360 hue.
 
+import { proxiedSrc } from "./img";
+
 export async function extractHue(imageUrl: string): Promise<number> {
   if (typeof window === "undefined") return 0;
   return new Promise((resolve) => {
@@ -35,7 +37,9 @@ export async function extractHue(imageUrl: string): Promise<number> {
       }
     };
     img.onerror = () => resolve(0);
-    img.src = imageUrl;
+    // never let a slow or hung image hold up saving the item
+    setTimeout(() => resolve(0), 4000);
+    img.src = proxiedSrc(imageUrl); // same-origin, so the canvas isn't tainted
   });
 }
 

@@ -3,17 +3,18 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getUserWardrobeId } from "@/lib/wardrobe";
+import { clip, looseUrl } from "@/lib/links";
 
 export const dynamic = "force-dynamic";
 
 const patch = z.object({
-  name: z.string().min(1).max(120).optional(),
-  brand: z.string().max(80).nullable().optional(),
+  name: z.preprocess(clip(120), z.string().min(1).optional()),
+  brand: z.preprocess(clip(80), z.string().nullable().optional()),
   price: z.number().nonnegative().nullable().optional(),
   currency: z.string().max(8).nullable().optional(),
   status: z.enum(["owned", "want"]).optional(),
-  boughtAt: z.string().max(120).nullable().optional(),
-  notes: z.string().max(2000).nullable().optional(),
+  boughtAt: z.preprocess(clip(120), z.string().nullable().optional()),
+  notes: z.preprocess(clip(2000), z.string().nullable().optional()),
   targetPrice: z.number().nonnegative().nullable().optional(),
   priority: z.number().int().nullable().optional(),
   sectionId: z.string().nullable().optional(),
@@ -22,7 +23,7 @@ const patch = z.object({
   posX: z.number().optional(),
   posY: z.number().optional(),
   rotation: z.number().optional(),
-  cutoutUrl: z.string().url().nullable().optional(),
+  cutoutUrl: z.preprocess(looseUrl, z.string().nullable().optional()),
 });
 
 async function guard(userId: string, itemId: string) {

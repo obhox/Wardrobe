@@ -105,4 +105,7 @@ export interface ScrapeResult {
   currency?: string;
   brand?: string;
   sourceUrl: string;
+  // set for shops (aliexpress, temu) that never show their product page to a
+  // link preview — the form asks for a photo instead of saying "couldn't read"
+  shop?: string;
 }

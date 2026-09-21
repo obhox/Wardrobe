@@ -7,6 +7,8 @@ import { extractHue } from "@/lib/color";
 import type { ItemStatus, SizeTier } from "@/lib/types";
 import { SIZE_TIERS } from "@/lib/theme";
 import { lastCurrency, rememberCurrency } from "@/lib/currency";
+import { downscaleImage } from "@/lib/img";
+import { extractUrl, titleFromUrl } from "@/lib/links";
 import PriceField, { Chevron } from "./PriceField";
 
 export default function AddItem() {
@@ -29,40 +31,58 @@ export default function AddItem() {
   const [scraping, setScraping] = useState(false);
   const [scrapeMsg, setScrapeMsg] = useState("");
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  // a link was read but gave no usable photo — offer an upload right there
+  const [needPhoto, setNeedPhoto] = useState(false);
 
   async function fetchLink() {
     if (!url.trim()) return;
+    // share sheets paste "Check this out! https://…" — keep just the link
+    const link = extractUrl(url);
+    if (!link) {
+      setScrapeMsg("that doesn't look like a link — it should start with https://");
+      return;
+    }
     setScraping(true);
     setScrapeMsg("");
+    setNeedPhoto(false);
+    setSourceUrl(link);
     try {
-      const res = await api.post("/api/scrape", { url: url.trim() });
-      setSourceUrl(url.trim());
-      if (res.ok) {
-        if (res.imageUrl) setImage(res.imageUrl);
-        if (res.title) setName(res.title);
-        if (res.brand) setBrand(res.brand);
-        if (res.price) setPrice(String(res.price));
-        if (res.currency) setCurrency(res.currency);
-      } else {
-        setScrapeMsg("couldn't read that link — add the details yourself?");
+      const res = await api.post("/api/scrape", { url: link });
+      if (res.title) setName(res.title);
+      if (res.brand) setBrand(res.brand);
+      if (res.price) setPrice(String(res.price));
+      if (res.currency) setCurrency(res.currency);
+      if (res.imageUrl) setImage(res.imageUrl);
+      if (res.shop) {
+        setScrapeMsg(`${res.shop} hides its product details from link previews — add a photo (a screenshot works) and fill in the rest. the link is kept.`);
+        setNeedPhoto(true);
+      } else if (!res.imageUrl) {
+        setScrapeMsg("couldn't get a photo from that link — add one and fill in the details. the link is kept.");
+        setNeedPhoto(true);
       }
     } catch {
-      setScrapeMsg("couldn't read that link — add the details yourself?");
+      setName((n) => n || titleFromUrl(link) || "");
+      setScrapeMsg("couldn't read that link — add a photo and the details yourself? the link is kept.");
+      setNeedPhoto(true);
     }
     setScraping(false);
   }
 
-  function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setImage(String(reader.result));
-    reader.readAsDataURL(file);
+    try {
+      setImage(await downscaleImage(file));
+    } catch {
+      setSaveError("couldn't open that photo — try another?");
+    }
   }
 
   async function save() {
     if (!image || !name.trim()) return;
     setSaving(true);
+    setSaveError("");
     let hue = 0;
     try {
       hue = await extractHue(image);
@@ -70,27 +90,36 @@ export default function AddItem() {
       /* ignore */
     }
     if (currency.trim()) rememberCurrency(currency.trim());
-    await addItem({
-      imageUrl: image,
-      cutoutUrl: image,
-      sourceUrl: sourceUrl || null,
-      name: name.trim(),
-      brand: brand.trim() || null,
-      price: price ? Number(price) : null,
-      currency: currency.trim() || null,
-      status,
-      boughtAt: status === "owned" ? boughtAt.trim() || null : null,
-      targetPrice: status === "want" && price ? Number(price) : null,
-      sectionId: sectionId || null,
-      sizeTier,
-      hue,
-      posX: 0.4 + Math.random() * 0.2,
-      posY: 0.35 + Math.random() * 0.2,
-      rotation: (Math.random() - 0.5) * 24,
-      sourceType: tab === "link" ? "scraped" : "manual",
-    });
+    const sourceType = tab === "link" && !needPhoto ? "scraped" : "manual";
+    try {
+      await addItem({
+        imageUrl: image,
+        cutoutUrl: image,
+        sourceUrl: sourceUrl || null,
+        name: name.trim(),
+        brand: brand.trim() || null,
+        price: price ? Number(price) : null,
+        currency: currency.trim() || null,
+        status,
+        boughtAt: status === "owned" ? boughtAt.trim() || null : null,
+        targetPrice: status === "want" && price ? Number(price) : null,
+        sectionId: sectionId || null,
+        sizeTier,
+        hue,
+        posX: 0.4 + Math.random() * 0.2,
+        posY: 0.35 + Math.random() * 0.2,
+        rotation: (Math.random() - 0.5) * 24,
+        sourceType,
+      });
+    } catch (err) {
+      setSaving(false);
+      setSaveError(
+        `couldn't save that item${err instanceof Error && err.message ? ` (${err.message})` : ""} — try again?`,
+      );
+      return;
+    }
     if (typeof window !== "undefined" && (window as any).falorb) {
-      (window as any).falorb.track("item_added", { status, sourceType: tab === "link" ? "scraped" : "manual" });
+      (window as any).falorb.track("item_added", { status, sourceType });
     }
     setPanel(null);
   }
@@ -130,6 +159,12 @@ export default function AddItem() {
       )}
 
       {scrapeMsg && <p className="mt-2 text-xs lowercase text-blush">{scrapeMsg}</p>}
+      {tab === "link" && needPhoto && (
+        <label className="mt-2 flex cursor-pointer items-center justify-center rounded-lg border border-dashed border-rule bg-ground/30 py-4 text-sm lowercase text-ink-soft hover:border-ink">
+          {image ? "choose a different photo" : "add a photo"}
+          <input type="file" accept="image/*" onChange={onFile} className="hidden" />
+        </label>
+      )}
 
       <div className="mt-4 flex flex-col gap-4 sm:flex-row">
         <div className="flex h-28 w-28 shrink-0 items-center justify-center self-center rounded-lg border border-rule bg-ground/30 sm:self-auto">
@@ -141,8 +176,8 @@ export default function AddItem() {
           )}
         </div>
         <div className="flex flex-1 flex-col gap-2">
-          <Inp value={name} onChange={setName} placeholder="name" />
-          <Inp value={brand} onChange={setBrand} placeholder="brand" />
+          <Inp value={name} onChange={setName} placeholder="name" maxLength={120} />
+          <Inp value={brand} onChange={setBrand} placeholder="brand" maxLength={80} />
           <PriceField
             currency={currency}
             onCurrency={setCurrency}
@@ -183,6 +218,8 @@ export default function AddItem() {
           <Inp value={boughtAt} onChange={setBoughtAt} placeholder="where bought (optional)" />
         </div>
       )}
+
+      {saveError && <p className="mt-4 text-right text-xs lowercase text-blush">{saveError}</p>}
 
       <div className="mt-5 flex justify-end gap-2">
         <button onClick={() => setPanel(null)} className="rounded-lg border border-rule px-4 py-2 text-sm lowercase">
@@ -242,11 +279,13 @@ function Inp({
   onChange,
   placeholder,
   type = "text",
+  maxLength,
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder: string;
   type?: string;
+  maxLength?: number;
 }) {
   return (
     <input
@@ -254,6 +293,7 @@ function Inp({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
+      maxLength={maxLength}
       className="w-full rounded-lg border border-rule bg-ground/40 px-3 py-2 text-sm lowercase outline-none placeholder:text-ink-soft/60 focus:border-ink"
     />
   );

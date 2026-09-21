@@ -3,20 +3,21 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getUserWardrobeId } from "@/lib/wardrobe";
+import { clip, looseUrl } from "@/lib/links";
 
 export const dynamic = "force-dynamic";
 
 const create = z.object({
-  imageUrl: z.string().url(),
-  cutoutUrl: z.string().url().nullable().optional(),
-  sourceUrl: z.string().url().nullable().optional(),
-  name: z.string().min(1).max(120),
-  brand: z.string().max(80).nullable().optional(),
+  imageUrl: z.preprocess(looseUrl, z.string().min(1)),
+  cutoutUrl: z.preprocess(looseUrl, z.string().nullable().optional()),
+  sourceUrl: z.preprocess(looseUrl, z.string().max(4000).nullable().optional()),
+  name: z.preprocess(clip(120), z.string().min(1)),
+  brand: z.preprocess(clip(80), z.string().nullable().optional()),
   price: z.number().nonnegative().nullable().optional(),
   currency: z.string().max(8).nullable().optional(),
   status: z.enum(["owned", "want"]).default("owned"),
-  boughtAt: z.string().max(120).nullable().optional(),
-  notes: z.string().max(2000).nullable().optional(),
+  boughtAt: z.preprocess(clip(120), z.string().nullable().optional()),
+  notes: z.preprocess(clip(2000), z.string().nullable().optional()),
   targetPrice: z.number().nonnegative().nullable().optional(),
   sectionId: z.string().nullable().optional(),
   sizeTier: z.enum(["hero", "large", "medium", "small"]).default("medium"),
