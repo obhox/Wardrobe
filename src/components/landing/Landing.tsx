@@ -6,24 +6,11 @@ import CombinationLock from "@/components/auth/CombinationLock";
 
 /* ------------------------------------------------------------------ *
  *  wardrobe — landing page
- *  Calm ground, monospace, cutouts drifting in negative space.
+ *  Calm ground, monospace, and a real shot of the studio up top.
  *  Three words to design by: cutout · calm · curiosity. (brief §3)
  *  The CombinationLock (login / create / recover) is kept intact,
  *  embedded as the "enter" panel at the foot of the page.
  * ------------------------------------------------------------------ */
-
-/** floating cutouts — real background-removed product PNGs.
- *  mixed size tiers + random rotation −13°…+13° (brief §15) */
-const CUTOUTS = [
-  { src: "/cutouts/dress.png", alt: "dress", top: "10%", left: "6%", size: 150, rot: -9, dur: 7, delay: 0 },
-  { src: "/cutouts/jacket.png", alt: "jacket", top: "18%", left: "80%", size: 168, rot: 8, dur: 8.4, delay: 0.6 },
-  { src: "/cutouts/shoe.png", alt: "sneaker", top: "64%", left: "9%", size: 140, rot: -12, dur: 6.5, delay: 1.1 },
-  { src: "/cutouts/coat.png", alt: "coat", top: "66%", left: "78%", size: 156, rot: 7, dur: 9, delay: 0.3 },
-  { src: "/cutouts/hat.png", alt: "hat", top: "40%", left: "90%", size: 120, rot: -6, dur: 7.5, delay: 1.4 },
-  { src: "/cutouts/sunglasses.png", alt: "sunglasses", top: "84%", left: "46%", size: 104, rot: 10, dur: 6.8, delay: 0.9 },
-  { src: "/cutouts/watch.png", alt: "watch", top: "8%", left: "58%", size: 92, rot: -4, dur: 8.2, delay: 0.2 },
-  { src: "/cutouts/scarf.png", alt: "scarf", top: "50%", left: "2%", size: 110, rot: 11, dur: 7.2, delay: 1.7 },
-];
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
@@ -65,34 +52,7 @@ export default function Landing() {
       </header>
 
       {/* ── hero ────────────────────────────────────────────── */}
-      <section className="relative isolate mx-auto flex max-w-6xl flex-col items-center px-6 pb-28 pt-20 text-center sm:pt-28">
-        {/* drifting cutouts in the negative space — desktop/tablet only;
-            on phones they crowd the copy, so we show a tidy row instead (below) */}
-        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 hidden sm:block">
-          {CUTOUTS.map((c, i) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={i}
-              src={c.src}
-              alt={c.alt}
-              loading="eager"
-              className="cutout-shadow floaty absolute select-none object-contain"
-              style={
-                {
-                  top: c.top,
-                  left: c.left,
-                  width: c.size,
-                  height: c.size,
-                  ["--rot" as string]: `${c.rot}deg`,
-                  ["--dur" as string]: `${c.dur}s`,
-                  ["--delay" as string]: `${c.delay}s`,
-                  transform: `rotate(${c.rot}deg)`,
-                } as React.CSSProperties
-              }
-            />
-          ))}
-        </div>
-
+      <section className="relative isolate mx-auto flex max-w-6xl flex-col items-center px-6 pb-16 pt-16 text-center sm:pb-24 sm:pt-24">
         <motion.span
           {...fadeUp}
           className="mb-6 rounded-full border border-rule bg-panel/70 px-4 py-1.5 text-xs lowercase tracking-wide text-ink-soft backdrop-blur"
@@ -147,30 +107,55 @@ export default function Landing() {
           no commerce · no gifting · purely, quietly yours.
         </motion.p>
 
-        {/* mobile-only: a tidy floating row, the cutout signature without the clutter */}
+        {/* the real studio — a demo wardrobe, captured from the app itself */}
         <motion.div
-          {...fadeUp}
-          transition={{ ...fadeUp.transition, delay: 0.3 }}
-          aria-hidden
-          className="mt-12 flex items-end justify-center gap-1 sm:hidden"
+          initial={reduce ? false : { opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          className="relative mt-14 w-full sm:mt-16"
         >
-          {CUTOUTS.slice(0, 5).map((c, i) => (
-            // eslint-disable-next-line @next/next/no-img-element
+          {/* soft glow so the frame lifts off the ground */}
+          <div
+            aria-hidden
+            className="absolute inset-x-[8%] -bottom-6 top-10 -z-10 rounded-[40px] bg-panel/60 blur-3xl"
+          />
+
+          {/* desktop / tablet: browser window */}
+          <div className="mx-auto hidden max-w-5xl overflow-hidden rounded-2xl border border-rule bg-panel shadow-[0_40px_90px_-20px_var(--shadow)] sm:block">
+            <div className="flex items-center gap-3 border-b border-rule px-4 py-2.5">
+              <div className="flex gap-1.5" aria-hidden>
+                <span className="h-2.5 w-2.5 rounded-full bg-ink/15" />
+                <span className="h-2.5 w-2.5 rounded-full bg-ink/15" />
+                <span className="h-2.5 w-2.5 rounded-full bg-ink/15" />
+              </div>
+              <div className="mx-auto rounded-md bg-ground/50 px-10 py-1 text-[11px] lowercase text-ink-soft">
+                wardrobe.obhox.com/studio
+              </div>
+              <div className="w-[42px]" aria-hidden />
+            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              key={i}
-              src={c.src}
-              alt=""
-              className="cutout-shadow floaty h-16 w-16 object-contain"
-              style={
-                {
-                  ["--rot" as string]: `${c.rot}deg`,
-                  ["--dur" as string]: `${c.dur}s`,
-                  ["--delay" as string]: `${i * 0.18}s`,
-                  transform: `rotate(${c.rot}deg)`,
-                } as React.CSSProperties
-              }
+              src="/landing/studio-desktop.webp"
+              width={2400}
+              height={1500}
+              alt="the wardrobe studio: a sidebar of sections beside a canvas of clothing cutouts — a dress, jacket, coat, sneakers and accessories — some tagged want"
+              fetchPriority="high"
+              className="block h-auto w-full"
             />
-          ))}
+          </div>
+
+          {/* phones: the studio as it looks on a phone */}
+          <div className="mx-auto w-[260px] overflow-hidden rounded-[36px] border-[6px] border-ink bg-ink shadow-[0_30px_70px_-16px_var(--shadow)] sm:hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/landing/studio-mobile.webp"
+              width={900}
+              height={1948}
+              alt="the wardrobe studio on a phone: clothing cutouts arranged on a canvas"
+              fetchPriority="high"
+              className="block h-auto w-full rounded-[30px]"
+            />
+          </div>
         </motion.div>
       </section>
 
