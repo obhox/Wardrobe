@@ -7,7 +7,7 @@ import { extractHue } from "@/lib/color";
 import type { ItemStatus, SizeTier } from "@/lib/types";
 import { SIZE_TIERS } from "@/lib/theme";
 import { lastCurrency, rememberCurrency } from "@/lib/currency";
-import CurrencyPicker from "./CurrencyPicker";
+import PriceField, { Chevron } from "./PriceField";
 
 export default function AddItem() {
   const setPanel = useStore((s) => s.setPanel);
@@ -143,21 +143,25 @@ export default function AddItem() {
         <div className="flex flex-1 flex-col gap-2">
           <Inp value={name} onChange={setName} placeholder="name" />
           <Inp value={brand} onChange={setBrand} placeholder="brand" />
-          <div className="flex gap-2">
-            <CurrencyPicker value={currency} onChange={setCurrency} />
-            <Inp value={price} onChange={setPrice} placeholder={status === "want" ? "target price" : "price"} type="number" />
-          </div>
-          <div className="flex gap-2">
+          <PriceField
+            currency={currency}
+            onCurrency={setCurrency}
+            amount={price}
+            onAmount={setPrice}
+            placeholder={status === "want" ? "target price" : "price"}
+          />
+          <div className="relative flex items-center">
             <select
               value={sectionId}
               onChange={(e) => setSectionId(e.target.value)}
-              className="flex-1 rounded-lg border border-rule bg-ground/40 px-2 py-2 text-sm lowercase outline-none"
+              className="w-full cursor-pointer appearance-none rounded-lg border border-rule bg-ground/40 py-2 pl-3 pr-8 text-sm lowercase outline-none focus:border-ink"
             >
               <option value="">unsorted</option>
               {sections.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
             </select>
+            <Chevron />
           </div>
         </div>
       </div>

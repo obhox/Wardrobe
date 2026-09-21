@@ -3,8 +3,7 @@ import { motion } from "framer-motion";
 import { useStore } from "@/lib/store";
 import { SIZE_TIERS } from "@/lib/theme";
 import type { ItemStatus, SizeTier } from "@/lib/types";
-import { currencySymbol } from "@/lib/currency";
-import CurrencyPicker from "./CurrencyPicker";
+import PriceField from "./PriceField";
 
 export default function ItemDetail() {
   const selectedId = useStore((s) => s.selectedId);
@@ -40,23 +39,19 @@ export default function ItemDetail() {
             className="bg-transparent font-[family-name:var(--font-display)] text-xl lowercase outline-none"
           />
 
-          <div className="flex flex-wrap gap-2 text-sm">
+          <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
             <input
               value={item.brand ?? ""}
               onChange={(e) => updateItem(item.id, { brand: e.target.value })}
               placeholder="brand"
-              className="rounded-lg border border-rule bg-ground/40 px-2 py-1 lowercase outline-none"
+              className="w-full min-w-0 rounded-lg border border-rule bg-ground/40 px-3 py-1.5 lowercase outline-none placeholder:text-ink-soft/60 focus:border-ink"
             />
-            <CurrencyPicker
-              value={item.currency}
-              onChange={(v) => updateItem(item.id, { currency: v || null })}
-            />
-            <input
-              type="number"
-              value={item.price ?? ""}
-              onChange={(e) => updateItem(item.id, { price: e.target.value ? Number(e.target.value) : null })}
-              placeholder="price"
-              className="w-24 rounded-lg border border-rule bg-ground/40 px-2 py-1 outline-none"
+            <PriceField
+              size="sm"
+              currency={item.currency}
+              onCurrency={(v) => updateItem(item.id, { currency: v || null })}
+              amount={item.price == null ? "" : String(item.price)}
+              onAmount={(v) => updateItem(item.id, { price: v ? Number(v) : null })}
             />
           </div>
 
@@ -113,12 +108,12 @@ export default function ItemDetail() {
               className="rounded-lg border border-rule bg-ground/40 px-3 py-2 text-sm lowercase outline-none"
             />
           ) : (
-            <input
-              type="number"
-              value={item.targetPrice ?? ""}
-              onChange={(e) => updateItem(item.id, { targetPrice: e.target.value ? Number(e.target.value) : null })}
-              placeholder={`target price (${currencySymbol(item.currency)})`}
-              className="rounded-lg border border-rule bg-ground/40 px-3 py-2 text-sm outline-none"
+            <PriceField
+              lockCurrency
+              currency={item.currency}
+              amount={item.targetPrice == null ? "" : String(item.targetPrice)}
+              onAmount={(v) => updateItem(item.id, { targetPrice: v ? Number(v) : null })}
+              placeholder="target price"
             />
           )}
 
