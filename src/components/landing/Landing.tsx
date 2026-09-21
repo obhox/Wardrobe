@@ -66,8 +66,9 @@ export default function Landing() {
 
       {/* ── hero ────────────────────────────────────────────── */}
       <section className="relative isolate mx-auto flex max-w-6xl flex-col items-center px-6 pb-28 pt-20 text-center sm:pt-28">
-        {/* drifting cutouts in the negative space */}
-        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+        {/* drifting cutouts in the negative space — desktop/tablet only;
+            on phones they crowd the copy, so we show a tidy row instead (below) */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 hidden sm:block">
           {CUTOUTS.map((c, i) => (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -145,6 +146,32 @@ export default function Landing() {
         >
           no commerce · no gifting · purely, quietly yours.
         </motion.p>
+
+        {/* mobile-only: a tidy floating row, the cutout signature without the clutter */}
+        <motion.div
+          {...fadeUp}
+          transition={{ ...fadeUp.transition, delay: 0.3 }}
+          aria-hidden
+          className="mt-12 flex items-end justify-center gap-1 sm:hidden"
+        >
+          {CUTOUTS.slice(0, 5).map((c, i) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={i}
+              src={c.src}
+              alt=""
+              className="cutout-shadow floaty h-16 w-16 object-contain"
+              style={
+                {
+                  ["--rot" as string]: `${c.rot}deg`,
+                  ["--dur" as string]: `${c.dur}s`,
+                  ["--delay" as string]: `${i * 0.18}s`,
+                  transform: `rotate(${c.rot}deg)`,
+                } as React.CSSProperties
+              }
+            />
+          ))}
+        </motion.div>
       </section>
 
       {/* ── how it works ────────────────────────────────────── */}
