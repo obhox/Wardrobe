@@ -6,6 +6,8 @@ import { api } from "@/lib/api";
 import { extractHue } from "@/lib/color";
 import type { ItemStatus, SizeTier } from "@/lib/types";
 import { SIZE_TIERS } from "@/lib/theme";
+import { lastCurrency, rememberCurrency } from "@/lib/currency";
+import CurrencyPicker from "./CurrencyPicker";
 
 export default function AddItem() {
   const setPanel = useStore((s) => s.setPanel);
@@ -18,7 +20,7 @@ export default function AddItem() {
   const [name, setName] = useState("");
   const [brand, setBrand] = useState("");
   const [price, setPrice] = useState("");
-  const [currency, setCurrency] = useState("");
+  const [currency, setCurrency] = useState(lastCurrency);
   const [status, setStatus] = useState<ItemStatus>("owned");
   const [sectionId, setSectionId] = useState<string>("");
   const [sizeTier, setSizeTier] = useState<SizeTier>("medium");
@@ -67,6 +69,7 @@ export default function AddItem() {
     } catch {
       /* ignore */
     }
+    if (currency.trim()) rememberCurrency(currency.trim());
     await addItem({
       imageUrl: image,
       cutoutUrl: image,
@@ -74,7 +77,7 @@ export default function AddItem() {
       name: name.trim(),
       brand: brand.trim() || null,
       price: price ? Number(price) : null,
-      currency: currency || null,
+      currency: currency.trim() || null,
       status,
       boughtAt: status === "owned" ? boughtAt.trim() || null : null,
       targetPrice: status === "want" && price ? Number(price) : null,
@@ -141,7 +144,10 @@ export default function AddItem() {
           <Inp value={name} onChange={setName} placeholder="name" />
           <Inp value={brand} onChange={setBrand} placeholder="brand" />
           <div className="flex gap-2">
+            <CurrencyPicker value={currency} onChange={setCurrency} />
             <Inp value={price} onChange={setPrice} placeholder={status === "want" ? "target price" : "price"} type="number" />
+          </div>
+          <div className="flex gap-2">
             <select
               value={sectionId}
               onChange={(e) => setSectionId(e.target.value)}

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { proxiedSrc } from "@/lib/img";
+import { formatMoney } from "@/lib/currency";
 
 export interface GuestItem {
   id: string;
@@ -20,19 +21,6 @@ export interface GuestItem {
   sourceUrl?: string | null;
 }
 
-function money(price?: number | null, currency?: string | null) {
-  if (price == null) return null;
-  try {
-    return new Intl.NumberFormat(undefined, {
-      style: "currency",
-      currency: currency || "USD",
-      maximumFractionDigits: 2,
-    }).format(price);
-  } catch {
-    return `${currency || "$"}${price}`;
-  }
-}
-
 // Read-only item on the shared guest canvas. When `details` is on, tapping the
 // item opens a small info card (name, brand, price, where bought, notes, link).
 // In `gallery` mode it renders as a flowing grid cell instead of an absolutely
@@ -47,7 +35,7 @@ export default function GuestCutout({
   gallery?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const price = money(item.price, item.currency);
+  const price = formatMoney(item.price, item.currency);
 
   return (
     <div

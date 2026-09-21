@@ -3,6 +3,8 @@ import { motion } from "framer-motion";
 import { useStore } from "@/lib/store";
 import { SIZE_TIERS } from "@/lib/theme";
 import type { ItemStatus, SizeTier } from "@/lib/types";
+import { currencySymbol } from "@/lib/currency";
+import CurrencyPicker from "./CurrencyPicker";
 
 export default function ItemDetail() {
   const selectedId = useStore((s) => s.selectedId);
@@ -44,6 +46,10 @@ export default function ItemDetail() {
               onChange={(e) => updateItem(item.id, { brand: e.target.value })}
               placeholder="brand"
               className="rounded-lg border border-rule bg-ground/40 px-2 py-1 lowercase outline-none"
+            />
+            <CurrencyPicker
+              value={item.currency}
+              onChange={(v) => updateItem(item.id, { currency: v || null })}
             />
             <input
               type="number"
@@ -111,7 +117,7 @@ export default function ItemDetail() {
               type="number"
               value={item.targetPrice ?? ""}
               onChange={(e) => updateItem(item.id, { targetPrice: e.target.value ? Number(e.target.value) : null })}
-              placeholder="target price"
+              placeholder={`target price (${currencySymbol(item.currency)})`}
               className="rounded-lg border border-rule bg-ground/40 px-3 py-2 text-sm outline-none"
             />
           )}
