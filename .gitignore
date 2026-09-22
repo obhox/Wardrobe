@@ -44,3 +44,7 @@ next-env.d.ts
 /extension/dist/
 /extension/*.zip
 /extension/store/out/
+
+# database dumps / local debug output — never commit
+*.sql
+backup-err.txt
