@@ -1,6 +1,5 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { startAuthentication } from "@simplewebauthn/browser";
 import { api } from "@/lib/api";
@@ -9,8 +8,10 @@ import { track } from "@/lib/analytics";
 type Mode = "home" | "email" | "login" | "create" | "recover";
 
 export default function CombinationLock() {
-  const router = useRouter();
   const [mode, setMode] = useState<Mode>("home");
+  // a full page load (not a client-side route change) so the studio's own
+  // security policy applies — it allows what in-browser background removal needs
+  const enter = () => window.location.assign("/studio");
 
   return (
     <div className="w-full max-w-md">
@@ -31,10 +32,10 @@ export default function CombinationLock() {
 
         <AnimatePresence mode="wait">
           {mode === "home" && <Home key="home" setMode={setMode} />}
-          {mode === "email" && <EmailMagic key="email" setMode={setMode} onDone={() => router.push("/studio")} />}
-          {mode === "login" && <Login key="login" setMode={setMode} onDone={() => router.push("/studio")} />}
-          {mode === "create" && <Create key="create" setMode={setMode} onDone={() => router.push("/studio")} />}
-          {mode === "recover" && <Recover key="recover" setMode={setMode} onDone={() => router.push("/studio")} />}
+          {mode === "email" && <EmailMagic key="email" setMode={setMode} onDone={enter} />}
+          {mode === "login" && <Login key="login" setMode={setMode} onDone={enter} />}
+          {mode === "create" && <Create key="create" setMode={setMode} onDone={enter} />}
+          {mode === "recover" && <Recover key="recover" setMode={setMode} onDone={enter} />}
         </AnimatePresence>
       </motion.div>
 

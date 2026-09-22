@@ -15,11 +15,14 @@ const storage = origin(process.env.S3_PUBLIC_URL);
 // background-removal model files (see src/lib/cutout.ts)
 const imgly = origin(process.env.NEXT_PUBLIC_IMGLY_PUBLIC_PATH) || "https://staticimgly.com";
 
-const csp = [
+// `evalAllowed`: the studio runs in-browser background removal, whose ndarray
+// dependency builds functions with `new Function` — so only /studio pages get
+// 'unsafe-eval'. Everything else (landing, guest share pages) stays stricter.
+const csp = (evalAllowed: boolean) => [
   "default-src 'self'",
   // Next's inline bootstrap needs 'unsafe-inline'; background removal needs
   // WASM plus the ONNX runtime's blob: glue script
-  `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://a.falorb.com ${imgly}${dev ? " 'unsafe-eval'" : ""}`,
+  `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://a.falorb.com ${imgly}${dev || evalAllowed ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
   `img-src 'self' data: blob: ${storage}`.trim(),
@@ -31,8 +34,8 @@ const csp = [
   "object-src 'none'",
 ].join("; ");
 
-const securityHeaders = [
-  { key: "Content-Security-Policy", value: csp },
+const securityHeaders = (evalAllowed = false) => [
+  { key: "Content-Security-Policy", value: csp(evalAllowed) },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "X-Frame-Options", value: "DENY" },
@@ -53,7 +56,12 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["argon2", "@simplewebauthn/server", "open-graph-scraper", "sharp"],
   poweredByHeader: false,
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    // later rules override earlier ones for the same header key
+    return [
+      { source: "/:path*", headers: securityHeaders() },
+      { source: "/studio", headers: securityHeaders(true) },
+      { source: "/studio/:path*", headers: securityHeaders(true) },
+    ];
   },
 };
 
