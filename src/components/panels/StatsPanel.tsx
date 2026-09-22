@@ -77,7 +77,7 @@ export default function StatsPanel({ defaultCurrency }: { defaultCurrency: strin
               <ul className="space-y-1">
                 {stats.drops.map((d) => (
                   <li key={d.id}>
-                    <button onClick={() => select(d.id)} className="flex w-full justify-between gap-2 text-left text-xs lowercase hover:underline">
+                    <button onClick={() => select(d.id)} className="flex w-full justify-between gap-2 py-1.5 text-left text-xs lowercase hover:underline sm:py-0">
                       <span className="truncate">{d.name}</span>
                       <span className="tabular shrink-0 text-ink-soft">
                         {formatMoney(d.from, d.currency)} → {formatMoney(d.to, d.currency)}
@@ -94,7 +94,7 @@ export default function StatsPanel({ defaultCurrency }: { defaultCurrency: strin
               <ul className="space-y-1">
                 {stats.recent.map((r) => (
                   <li key={r.id}>
-                    <button onClick={() => select(r.id)} className="flex w-full justify-between gap-2 text-left text-xs lowercase hover:underline">
+                    <button onClick={() => select(r.id)} className="flex w-full justify-between gap-2 py-1.5 text-left text-xs lowercase hover:underline sm:py-0">
                       <span className="truncate">{r.name}</span>
                       <span className="shrink-0 text-ink-soft">
                         {new Date(r.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}

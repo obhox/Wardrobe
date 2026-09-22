@@ -42,7 +42,7 @@ export default function ArrangePopover() {
             aria-checked={wardrobe.layoutMode === l.id}
             onClick={() => setLayout(l.id)}
             className={
-              "rounded-lg px-2 py-1.5 text-xs lowercase " +
+              "rounded-lg px-2 py-2 text-xs lowercase sm:py-1.5 " +
               (wardrobe.layoutMode === l.id ? "bg-ink text-panel" : "border border-rule hover:bg-ink/5")
             }
           >
@@ -60,7 +60,7 @@ export default function ArrangePopover() {
             aria-checked={wardrobe.sortKey === s.id}
             onClick={() => setSort(s.id)}
             className={
-              "rounded-lg px-2 py-1.5 text-left text-xs lowercase " +
+              "rounded-lg px-2 py-2 text-left text-xs lowercase sm:py-1.5 " +
               (wardrobe.sortKey === s.id ? "bg-ink text-panel" : "hover:bg-ink/5")
             }
           >

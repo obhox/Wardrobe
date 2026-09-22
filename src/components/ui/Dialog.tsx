@@ -83,10 +83,10 @@ export default function Dialog({
 
   const panelClass =
     variant === "sheet"
-      ? "thin-scroll absolute right-0 top-0 h-full w-full max-w-[360px] overflow-y-auto border-l border-rule bg-panel p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-[-12px_0_40px_var(--shadow)]"
+      ? "thin-scroll absolute right-0 top-0 h-full w-full overflow-y-auto overscroll-contain border-rule sm:max-w-[360px] sm:border-l border-rule bg-panel p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-[-12px_0_40px_var(--shadow)]"
       : variant === "popover"
         ? "absolute bottom-24 right-3 w-[min(17rem,calc(100vw-1.5rem))] rounded-2xl border border-rule bg-panel p-4 shadow-[0_18px_44px_var(--shadow)] sm:bottom-20 sm:right-5"
-        : "thin-scroll relative z-10 max-h-[92dvh] w-full overflow-y-auto rounded-2xl border border-rule bg-panel p-5 shadow-[0_24px_60px_var(--shadow)] sm:p-6";
+        : "thin-scroll relative z-10 max-h-[92dvh] w-full overflow-y-auto overscroll-contain rounded-2xl pb-[max(1.25rem,env(safe-area-inset-bottom))] border border-rule bg-panel p-5 shadow-[0_24px_60px_var(--shadow)] sm:p-6";
 
   return (
     <div
@@ -122,11 +122,11 @@ export default function Dialog({
 
 export function SheetHeader({ title, onClose, id }: { title: string; onClose: () => void; id?: string }) {
   return (
-    <div className="flex items-center justify-between gap-3">
+    <div className="sticky -top-5 z-10 -mx-5 -mt-5 flex items-center justify-between gap-3 bg-panel px-5 pb-2 pt-4 sm:static sm:m-0 sm:p-0">
       <h2 id={id} className="font-[family-name:var(--font-display)] text-lg lowercase">
         {title}
       </h2>
-      <button onClick={onClose} className="rounded px-1 text-sm lowercase text-ink-soft hover:text-ink">
+      <button onClick={onClose} className="-mr-2 rounded px-2 py-1.5 text-sm lowercase text-ink-soft hover:text-ink">
         close ×
       </button>
     </div>

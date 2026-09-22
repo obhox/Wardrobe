@@ -97,8 +97,8 @@ export default async function GuestView({ params }: { params: Promise<{ code: st
       style={groundVars(ground) ?? undefined}
     >
       {pattern !== "none" && <div className={`pointer-events-none absolute inset-0 ${PATTERN_CLASS[pattern]}`} />}
-      <header className="absolute left-5 top-5 z-10 sm:left-6 sm:top-6">
-        <h1 className="font-[family-name:var(--font-display)] text-xl lowercase">
+      <header className="absolute left-5 right-5 top-5 z-10 sm:left-6 sm:top-6">
+        <h1 className="truncate font-[family-name:var(--font-display)] text-lg lowercase sm:text-xl">
           {wardrobe.icon ?? "✦"} {wardrobe.title}
         </h1>
         {wardrobe.tagline && <p className="text-xs lowercase text-ink-soft">{wardrobe.tagline}</p>}
@@ -138,7 +138,7 @@ export default async function GuestView({ params }: { params: Promise<{ code: st
         </div>
       )}
 
-      <footer className="fixed bottom-4 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap text-xs lowercase text-ink-soft">
+      <footer className="fixed inset-x-3 bottom-[max(1rem,env(safe-area-inset-bottom))] z-10 text-center text-[11px] lowercase text-ink-soft sm:text-xs">
         a read-only peek · ✦ {wardrobe.owner.handle} ·{" "}
         <Link href="/" className="underline underline-offset-4">make your own</Link>
       </footer>

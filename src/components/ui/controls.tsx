@@ -20,7 +20,7 @@ export function Pill({
       title={title}
       onClick={onClick}
       className={
-        "rounded-full px-2.5 py-1 text-xs lowercase transition " +
+        "rounded-full px-3 py-1.5 text-xs lowercase transition sm:px-2.5 sm:py-1 " +
         (on ? "bg-ink text-panel" : "border border-rule hover:bg-ink/5")
       }
     >

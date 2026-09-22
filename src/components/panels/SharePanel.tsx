@@ -96,7 +96,7 @@ export default function SharePanel() {
               aria-label="share link"
               value={link}
               onFocus={(e) => e.target.select()}
-              className="w-full rounded-lg border border-rule bg-ground/40 px-3 py-2 text-xs outline-none"
+              className="w-full rounded-lg border border-rule bg-ground/40 px-3 py-2 text-base outline-none sm:text-xs"
             />
             <div className="flex gap-2">
               <button onClick={copy} className="flex-1 rounded-full bg-ink px-3 py-2 text-xs lowercase text-panel hover:opacity-90">

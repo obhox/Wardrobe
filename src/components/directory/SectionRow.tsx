@@ -79,7 +79,7 @@ export default function SectionRow({
                 setEditing(false);
               }
             }}
-            className="min-w-0 flex-1 rounded border border-rule bg-ground/40 px-1 text-base outline-none sm:text-[15px]"
+            className="min-w-0 flex-1 rounded border border-rule bg-ground/40 px-1.5 py-1 text-base outline-none sm:py-0 sm:text-[15px]"
           />
         ) : (
           <button onClick={onSelect} aria-pressed={active} className="min-w-0 flex-1 truncate py-0.5 text-left">

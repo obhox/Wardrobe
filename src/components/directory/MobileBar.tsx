@@ -18,7 +18,7 @@ export default function MobileBar({ onOpenDirectory }: { onOpenDirectory: () => 
       onClick={onClick}
       aria-pressed={on}
       className={
-        "shrink-0 rounded-full px-3 py-1 text-xs lowercase transition " +
+        "shrink-0 rounded-full px-3 py-1.5 text-xs lowercase transition " +
         (on ? "bg-ink text-panel" : "border border-rule bg-panel/60")
       }
     >
@@ -32,7 +32,7 @@ export default function MobileBar({ onOpenDirectory }: { onOpenDirectory: () => 
         <button
           onClick={onOpenDirectory}
           aria-label="open directory"
-          className="rounded-lg border border-rule px-2.5 py-1.5 text-sm"
+          className="rounded-lg border border-rule px-3 py-1.5 text-sm"
         >
           ☰
         </button>

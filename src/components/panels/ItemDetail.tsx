@@ -174,7 +174,7 @@ export default function ItemDetail() {
             maxLength={120}
             onChange={(e) => edit("name", e.target.value)}
             onBlur={() => !draft.name.trim() && setDraft({ ...draft, name: item.name })}
-            className="w-full rounded bg-transparent font-[family-name:var(--font-display)] text-xl lowercase outline-none focus:bg-ground/30"
+            className="w-full rounded bg-transparent py-1 font-[family-name:var(--font-display)] text-xl lowercase outline-none focus:bg-ground/30"
           />
 
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">

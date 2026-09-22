@@ -323,3 +323,26 @@ body {
     animation: none;
   }
 }
+
+/* touch screens: every control is at least a comfortable 32px target.
+   switches keep their own geometry; inline text links are unaffected. */
+@media (pointer: coarse) {
+  button:not([role="switch"]),
+  select,
+  [role="radio"],
+  [role="option"] {
+    min-height: 2rem;
+    min-width: 2rem;
+    touch-action: manipulation;
+  }
+  button.no-touch-min,
+  .no-touch-min {
+    min-height: 0;
+    min-width: 0;
+  }
+}
+
+/* respect the notch / home indicator on phones */
+.safe-bottom {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}

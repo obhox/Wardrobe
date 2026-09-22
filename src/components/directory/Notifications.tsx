@@ -71,7 +71,7 @@ export default function Notifications() {
         )}
       </button>
       {open && (
-        <div className="absolute bottom-full left-0 z-50 mb-2 w-72 rounded-xl border border-rule bg-panel p-2 text-ink shadow-[0_18px_40px_var(--shadow)]">
+        <div className="absolute bottom-full left-1/2 z-50 mb-2 w-[min(18rem,calc(100vw-2rem))] -translate-x-1/2 rounded-xl border border-rule bg-panel p-2 text-ink shadow-[0_18px_40px_var(--shadow)]">
           {list.length === 0 ? (
             <p className="p-2 text-xs lowercase text-ink-soft">
               no alerts yet. want items with a link are checked for price drops a few times a day.

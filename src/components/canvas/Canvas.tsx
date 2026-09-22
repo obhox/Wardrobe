@@ -4,6 +4,7 @@ import { useStore } from "@/lib/store";
 import { computeLayout, sectionRails, sortItems } from "@/lib/layout";
 import { useIsNarrow } from "@/lib/hooks";
 import type { Item, LayoutMode } from "@/lib/types";
+import { TIER_SIZE } from "@/lib/theme";
 import Cutout from "./Cutout";
 import GalleryCard from "./GalleryCard";
 import Sticker from "./Sticker";
@@ -45,11 +46,15 @@ export default function Canvas() {
   // a tidy grid, with an opt-in to see (and long-press-move) the collage
   const mode: LayoutMode = narrow && saved === "free" && !collageOnPhone ? "grid" : saved;
 
+  // size tiers shrink a little on small canvases so collages don't pile up
+  const scale = size.w ? Math.max(0.58, Math.min(1, size.w / 1050)) : 1;
+  const maxCols = size.w ? Math.max(2, Math.floor(size.w / (TIER_SIZE.medium * scale * 1.15))) : undefined;
+
   const placements = useMemo(() => {
     if (!payload) return null;
-    const pl = computeLayout(payload.items, payload.sections, mode, payload.wardrobe.sortKey);
+    const pl = computeLayout(payload.items, payload.sections, mode, payload.wardrobe.sortKey, { maxCols });
     return pl ? new Map(pl.map((p) => [p.id, p])) : null;
-  }, [payload, mode]);
+  }, [payload, mode, maxCols]);
 
   if (!payload) return null;
   const { items, stickers, sections, wardrobe } = payload;
@@ -104,8 +109,6 @@ export default function Canvas() {
     );
   }
 
-  // size tiers shrink a little on small canvases so collages don't pile up
-  const scale = size.w ? Math.max(0.58, Math.min(1, size.w / 1050)) : 1;
   const rails = sectionRails(items, sections, mode);
   const draggable = mode === "free";
 
@@ -136,13 +139,19 @@ export default function Canvas() {
             ))}
             {items.map((it, i) => {
               const pl = placements?.get(it.id);
+              // keep every cutout fully on the canvas (and, on phones, clear
+              // of the control bar), whatever its stored position
+              const half = (TIER_SIZE[it.sizeTier] * scale) / 2 + 6;
+              const bottom = narrow ? 64 : 8;
+              const fit = (v: number, span: number, lo: number, hi: number) =>
+                span > lo + hi ? Math.min(span - hi, Math.max(lo, v * span)) / span : v;
               return (
                 <Cutout
                   key={it.id}
                   item={it}
                   index={i}
-                  posX={pl?.posX ?? it.posX}
-                  posY={pl?.posY ?? it.posY}
+                  posX={fit(pl?.posX ?? it.posX, size.w, half, half)}
+                  posY={fit(pl?.posY ?? it.posY, size.h, half + (phoneToggle ? 34 : 0), half + bottom)}
                   rotation={pl?.rotation ?? it.rotation}
                   canvasW={size.w}
                   canvasH={size.h}

@@ -55,14 +55,17 @@ export function computeLayout(
   items: Item[],
   sections: Section[],
   mode: LayoutMode,
-  sortKey: SortKey
+  sortKey: SortKey,
+  opts: { maxCols?: number } = {}
 ): Placement[] | null {
   if (mode === "free" || mode === "gallery") return null;
 
   const sorted = sortItems(items, sortKey, sections);
 
   if (mode === "grid") {
-    const cols = Math.max(3, Math.ceil(Math.sqrt(sorted.length)) + 1);
+    const ideal = Math.max(3, Math.ceil(Math.sqrt(sorted.length)) + 1);
+    // never more columns than fit across the canvas (phones)
+    const cols = Math.max(2, Math.min(ideal, opts.maxCols ?? ideal));
     return sorted.map((it, i) => {
       const r = Math.floor(i / cols);
       const c = i % cols;
