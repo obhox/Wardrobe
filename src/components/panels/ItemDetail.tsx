@@ -46,12 +46,17 @@ export default function ItemDetail() {
               placeholder="brand"
               className="w-full min-w-0 rounded-lg border border-rule bg-ground/40 px-3 py-1.5 lowercase outline-none placeholder:text-ink-soft/60 focus:border-ink"
             />
+            {/* one price: for a want it's the target (kept in both fields, as AddItem saves it) */}
             <PriceField
               size="sm"
               currency={item.currency}
               onCurrency={(v) => updateItem(item.id, { currency: v || null })}
-              amount={item.price == null ? "" : String(item.price)}
-              onAmount={(v) => updateItem(item.id, { price: v ? Number(v) : null })}
+              amount={String((item.status === "want" ? item.targetPrice ?? item.price : item.price) ?? "")}
+              onAmount={(v) => {
+                const n = v ? Number(v) : null;
+                updateItem(item.id, item.status === "want" ? { price: n, targetPrice: n } : { price: n });
+              }}
+              placeholder={item.status === "want" ? "target price" : "price"}
             />
           </div>
 
@@ -100,20 +105,12 @@ export default function ItemDetail() {
             </div>
           </div>
 
-          {item.status === "owned" ? (
+          {item.status === "owned" && (
             <input
               value={item.boughtAt ?? ""}
               onChange={(e) => updateItem(item.id, { boughtAt: e.target.value })}
               placeholder="where bought"
               className="rounded-lg border border-rule bg-ground/40 px-3 py-2 text-sm lowercase outline-none"
-            />
-          ) : (
-            <PriceField
-              lockCurrency
-              currency={item.currency}
-              amount={item.targetPrice == null ? "" : String(item.targetPrice)}
-              onAmount={(v) => updateItem(item.id, { targetPrice: v ? Number(v) : null })}
-              placeholder="target price"
             />
           )}
 
