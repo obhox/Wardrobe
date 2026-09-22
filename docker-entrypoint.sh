@@ -9,8 +9,22 @@ PRISMA="node node_modules/prisma/build/index.js"
 # Private networking (e.g. postgres.railway.internal) can take a few seconds
 # at cold start, so retry — but never start the app on an unmigrated schema,
 # and never use `db push --accept-data-loss` against production data.
+# A database created with the old `db push` has tables but no migration
+# history, so `migrate deploy` refuses it with P3005. 0_init is exactly that
+# schema: mark it applied once, then retry to apply the rest.
+migrate() {
+  out=$($PRISMA migrate deploy 2>&1) && { echo "$out"; return 0; }
+  echo "$out" >&2
+  if echo "$out" | grep -q "P3005"; then
+    echo "✦ existing database has no migration history — baselining at 0_init"
+    $PRISMA migrate resolve --applied 0_init && $PRISMA migrate deploy
+    return
+  fi
+  return 1
+}
+
 attempt=1
-until $PRISMA migrate deploy; do
+until migrate; do
   if [ "$attempt" -ge 20 ]; then
     echo "✗ migrations failed after $attempt attempts — not starting" >&2
     exit 1

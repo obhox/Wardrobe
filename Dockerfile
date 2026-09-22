@@ -16,7 +16,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
-RUN npm ci --no-audit --no-fund || npm install --no-audit --no-fund
+# --include=dev: hosts like Coolify pass NODE_ENV=production as a build arg,
+# which would otherwise drop the devDependencies the build needs
+RUN npm ci --include=dev --no-audit --no-fund || npm install --include=dev --no-audit --no-fund
 
 # ---- builder: generate Prisma client + build Next ----
 FROM base AS builder
