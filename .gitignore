@@ -46,6 +46,7 @@ next-env.d.ts
 /extension/store/out/
 
 # database dumps / local debug output — never commit
-*.sql
+/*.sql
+!prisma/migrations/**/*.sql
 backup-err.txt
 !.env.example
