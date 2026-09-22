@@ -112,6 +112,8 @@ prisma/schema.prisma          User · Wardrobe · Section · Item · Sticker · 
 - **Image storage**: link-added items reference the remote image; uploaded photos
   are stored inline as data URLs for now. Wire object storage (S3/Supabase/Railway
   volume) and an `/api/upload` route for production-grade uploads.
+- **Browser extension** lives in `extension/` — save products from any shop tab
+  (setup in `extension/README.md`).
 - **Sharing** is off at MVP (decision §25.4); the `handle`/`shareCode`/`visibility`
   fields and the `w/[code]` route are in place to switch it on later.
 
@@ -126,3 +128,6 @@ prisma/schema.prisma          User · Wardrobe · Section · Item · Sticker · 
 | `npm run db:migrate` | apply migrations (`migrate deploy`) |
 | `npm run db:seed` | seed the demo wardrobe |
 | `npm run db:studio` | Prisma Studio |
+| `npm run ext:build` | build the Chrome extension into `extension/dist` (see `extension/README.md`) |
+| `npm run ext:dev` | same, pointed at `localhost:3000` |
+| `npm run ext:zip` | store build + zip for the Chrome Web Store (listing in `extension/STORE.md`) |

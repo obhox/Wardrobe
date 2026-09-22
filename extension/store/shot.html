@@ -1,0 +1,122 @@
+<!doctype html>
+<!--
+  Chrome Web Store artwork, rendered from the real popup (extension/dist) with
+  mocked chrome.* + API responses (mock.js). Serve the project root over http:
+    python3 -m http.server 8787
+  then open e.g.
+    http://localhost:8787/extension/store/shot.html?kind=screenshot&scene=form
+  `node extension/store/render.mjs` renders every asset to extension/store/out.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>wardrobe store art</title>
+    <style>
+      @font-face { font-family: "Martian Mono"; font-weight: 500; src: url("../static/fonts/martian-mono-500.woff2") format("woff2"); }
+      @font-face { font-family: "Spline Sans Mono"; font-weight: 300 700; src: url("../static/fonts/spline-sans-mono.woff2") format("woff2"); }
+      :root { --ground: #a9c4f5; --haze: #bcd2f8; --ink: #14161b; --ink-soft: #3a4150; --panel: #eef2fb; --shadow: rgba(36, 54, 96, 0.32); }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; overflow: hidden; }
+      body {
+        background: radial-gradient(circle at 20% 15%, var(--haze), var(--ground) 60%);
+        color: var(--ink);
+        font-family: "Spline Sans Mono", monospace;
+        text-transform: lowercase;
+      }
+      .frame { position: relative; display: flex; align-items: center; }
+      .popup {
+        flex: none;
+        border: 0;
+        border-radius: 14px;
+        background: var(--panel);
+        box-shadow: 0 30px 70px var(--shadow), 0 0 0 1px rgba(20, 22, 27, 0.12);
+        transform-origin: top left;
+      }
+      .popup-wrap { flex: none; }
+      h1 { font-family: "Martian Mono", monospace; font-weight: 500; letter-spacing: -0.02em; margin: 0; }
+      p { margin: 0; color: var(--ink-soft); }
+      .mark { font-family: "Martian Mono", monospace; font-weight: 500; }
+      .cutout { position: absolute; filter: drop-shadow(0 14px 16px var(--shadow)); }
+
+      /* 1280×800 screenshot */
+      .screenshot { width: 1280px; height: 800px; padding: 0 110px; gap: 90px; }
+      .screenshot .copy { flex: 1; }
+      .screenshot .mark { font-size: 22px; margin-bottom: 40px; display: block; }
+      .screenshot h1 { font-size: 44px; line-height: 1.15; }
+      .screenshot p { font-size: 19px; line-height: 1.5; margin-top: 22px; max-width: 470px; }
+
+      /* 440×280 small promo tile / 1400×560 marquee */
+      .tile, .marquee { flex-direction: column; justify-content: center; align-items: flex-start; }
+      .tile { width: 440px; height: 280px; padding: 34px; }
+      .tile .mark { font-size: 30px; }
+      .tile p { font-size: 15px; margin-top: 12px; max-width: 230px; line-height: 1.45; }
+      .marquee { width: 1400px; height: 560px; padding: 90px; }
+      .marquee .mark { font-size: 64px; }
+      .marquee p { font-size: 26px; margin-top: 22px; max-width: 620px; line-height: 1.45; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module">
+      const q = new URLSearchParams(location.search);
+      const kind = q.get("kind") || "screenshot";
+      const root = document.getElementById("root");
+      const cut = (name, style) => `<img class="cutout" src="/public/cutouts/${name}.png" style="${style}" alt="" />`;
+
+      const COPY = {
+        form: ["save it from any shop.", "click ✦ on a product page — the photo, name, brand and price are already filled in."],
+        dupe: ["no accidental doubles.", "wardrobe tells you when a link is already on your canvas, before you add it again."],
+        done: ["straight onto your canvas.", "pick a section, owned or want, a size — it lands in your wardrobe, ready to arrange."],
+        paste: ["any link works.", "on a page it can't read, paste a product link and wardrobe fetches the details."],
+      };
+
+      async function popup(scene, scale) {
+        const html = await (await fetch("/extension/dist/popup.html")).text();
+        const doc = html
+          .replace("<head>", `<head><base href="/extension/dist/"><script src="/extension/store/mock.js"><\/script>`);
+        const f = document.createElement("iframe");
+        f.className = "popup";
+        f.style.width = "360px";
+        f.setAttribute("scrolling", "no");
+        f.srcdoc = doc;
+        f.onload = () => {
+          // track the popup's own height, like Chrome does
+          const fit = () => {
+            f.style.height = f.contentDocument.documentElement.scrollHeight + "px";
+            wrap.style.width = 360 * scale + "px";
+            wrap.style.height = f.contentDocument.documentElement.scrollHeight * scale + "px";
+          };
+          new ResizeObserver(fit).observe(f.contentDocument.body);
+          fit();
+        };
+        f.style.transform = `scale(${scale})`;
+        const wrap = document.createElement("div");
+        wrap.className = "popup-wrap";
+        wrap.append(f);
+        return wrap;
+      }
+
+      const frame = document.createElement("div");
+      frame.className = `frame ${kind}`;
+      root.append(frame);
+
+      if (kind === "screenshot") {
+        const scene = q.get("scene") || "form";
+        const [h, p] = COPY[scene] ?? [scene, ""];
+        frame.innerHTML = `<div class="copy"><span class="mark">✦ wardrobe</span><h1>${h}</h1><p>${p}</p></div>`;
+        frame.append(await popup(scene, 1.2));
+      } else if (kind === "tile") {
+        frame.innerHTML = `<span class="mark">✦ wardrobe</span><p>save anything you see, straight to your closet.</p>`
+          + cut("jacket", "width:150px; right:20px; top:40px; transform:rotate(8deg)")
+          + cut("sunglasses", "width:96px; right:130px; bottom:26px; transform:rotate(-10deg)");
+      } else {
+        frame.innerHTML = `<span class="mark">✦ wardrobe</span><p>save anything you see, straight to your closet — photo, name, brand and price in one click.</p>`
+          + cut("coat", "width:250px; right:330px; top:70px; transform:rotate(-7deg)")
+          + cut("dress", "width:210px; right:110px; top:40px; transform:rotate(6deg)")
+          + cut("tshirt", "width:150px; right:250px; bottom:40px; transform:rotate(-4deg)")
+          + cut("hat", "width:130px; right:60px; bottom:60px; transform:rotate(12deg)");
+      }
+      document.body.dataset.ready = "1";
+    </script>
+  </body>
+</html>

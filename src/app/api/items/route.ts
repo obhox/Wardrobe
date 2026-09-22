@@ -28,6 +28,27 @@ const create = z.object({
   sourceType: z.enum(["manual", "scraped"]).default("manual"),
 });
 
+// "is this link already in my wardrobe?" — the browser extension asks before
+// adding, so saving the same product twice is a choice, not an accident
+export async function GET(req: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  const wardrobeId = await getUserWardrobeId(user.id);
+  if (!wardrobeId) return NextResponse.json({ error: "no wardrobe" }, { status: 404 });
+
+  const sourceUrl = req.nextUrl.searchParams.get("sourceUrl")?.trim();
+  if (!sourceUrl) return NextResponse.json({ error: "missing sourceUrl" }, { status: 400 });
+
+  const items = await prisma.item.findMany({
+    where: { wardrobeId, sourceUrl },
+    select: { id: true, name: true, status: true },
+    orderBy: { createdAt: "desc" },
+    take: 5,
+  });
+  return NextResponse.json({ items });
+}
+
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });

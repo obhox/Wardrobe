@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>wardrobe</title>
+    <link rel="stylesheet" href="popup.css" />
+    <script src="popup.js" defer></script>
+  </head>
+  <body>
+    <header>
+      <span class="mark">✦ wardrobe</span>
+      <a id="open-studio" href="#" class="quiet">open studio ↗</a>
+    </header>
+
+    <!-- loading · signed out · unreachable · unreadable page -->
+    <section id="status" class="status" role="status" aria-live="polite">
+      <span class="spinner" aria-hidden="true"></span>
+      <span>reading this page…</span>
+    </section>
+
+    <!-- a page we can't read: paste a product link instead -->
+    <section id="paste" class="paste" hidden>
+      <p>this page can't be read. paste a product link instead:</p>
+      <form id="paste-form" class="row">
+        <input id="paste-url" type="url" placeholder="https://…" aria-label="product link" required />
+        <button class="primary" type="submit">fetch</button>
+      </form>
+    </section>
+
+    <form id="form" hidden novalidate>
+      <div class="stage"><img id="preview" alt="" /></div>
+      <div id="thumbs" class="thumbs" role="listbox" aria-label="photos on this page"></div>
+      <p id="note-photo" class="hint" hidden></p>
+      <p id="dupe" class="dupe" hidden></p>
+
+      <input id="name" placeholder="name" maxlength="120" aria-label="name" autocomplete="off" />
+      <div class="row">
+        <input id="brand" placeholder="brand" maxlength="80" aria-label="brand" autocomplete="off" />
+        <select id="currency" aria-label="currency"></select>
+        <input id="price" class="price" placeholder="price" inputmode="decimal" aria-label="price" autocomplete="off" />
+      </div>
+
+      <div class="row">
+        <select id="section" aria-label="section"><option value="">unsorted</option></select>
+        <button id="section-new" type="button" class="icon" title="new section" aria-label="new section">+</button>
+      </div>
+      <div id="section-add" class="row" hidden>
+        <input id="section-name" placeholder="new section name" maxlength="40" aria-label="new section name" />
+        <button id="section-create" type="button" class="primary small">add</button>
+      </div>
+
+      <div class="pills" id="status-pills" role="radiogroup" aria-label="status">
+        <button type="button" data-v="owned" class="on">owned</button>
+        <button type="button" data-v="want">want</button>
+        <span class="sep"></span>
+        <span id="size-pills" class="pills" role="radiogroup" aria-label="size">
+          <button type="button" data-v="hero">hero</button>
+          <button type="button" data-v="large">large</button>
+          <button type="button" data-v="medium" class="on">medium</button>
+          <button type="button" data-v="small">small</button>
+        </span>
+      </div>
+
+      <input id="bought" placeholder="where bought (optional)" maxlength="120" aria-label="where bought" />
+      <button id="notes-toggle" type="button" class="link">+ add a note</button>
+      <textarea id="notes" rows="2" placeholder="a note" maxlength="2000" aria-label="note" hidden></textarea>
+
+      <p id="error" class="error" role="alert"></p>
+      <footer>
+        <span class="hint"><kbd id="kbd-mod">⌘</kbd><kbd>↵</kbd> to add</span>
+        <button id="save" class="primary" type="submit">add ✦</button>
+      </footer>
+    </form>
+
+    <section id="done" class="done" hidden>
+      <div class="stage small"><img id="done-img" alt="" /></div>
+      <p><b id="done-name"></b><br />is in your wardrobe ✦</p>
+      <div class="row center">
+        <button id="undo" type="button" class="ghost">undo</button>
+        <button id="view" type="button" class="primary">see it in the studio</button>
+      </div>
+    </section>
+  </body>
+</html>

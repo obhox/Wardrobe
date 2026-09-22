@@ -11,7 +11,11 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate deploy",
     "db:studio": "prisma studio",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "ext:build": "node extension/build.mjs",
+    "ext:dev": "node extension/build.mjs --dev",
+    "ext:zip": "node extension/build.mjs --zip",
+    "ext:art": "node extension/store/render.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -36,6 +40,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "esbuild": "^0.28.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "prisma": "^6.2.1",

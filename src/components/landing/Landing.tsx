@@ -258,7 +258,12 @@ export default function Landing() {
       <footer className="border-t border-rule">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 py-8 text-xs lowercase text-ink-soft sm:flex-row">
           <span className="font-[family-name:var(--font-display)]">✦ wardrobe</span>
-          <span>cutout · calm · curiosity</span>
+          <span>
+            cutout · calm · curiosity ·{" "}
+            <a href="/privacy" className="underline-offset-2 transition hover:text-ink hover:underline">
+              privacy
+            </a>
+          </span>
           <span>the quiet pleasure of seeing everything you own, arranged just so.</span>
         </div>
       </footer>

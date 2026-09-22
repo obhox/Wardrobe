@@ -6,6 +6,23 @@ import { getUserWardrobeId } from "@/lib/wardrobe";
 
 export const dynamic = "force-dynamic";
 
+// lightweight section list — used by the browser extension's section picker,
+// which shouldn't pull the whole wardrobe (items can carry inline photos)
+export async function GET() {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  const wardrobeId = await getUserWardrobeId(user.id);
+  if (!wardrobeId) return NextResponse.json({ error: "no wardrobe" }, { status: 404 });
+
+  const sections = await prisma.section.findMany({
+    where: { wardrobeId },
+    orderBy: { order: "asc" },
+    select: { id: true, name: true, icon: true },
+  });
+  return NextResponse.json({ sections });
+}
+
 const create = z.object({
   name: z.string().min(1).max(40),
   icon: z.string().max(4).nullable().optional(),
