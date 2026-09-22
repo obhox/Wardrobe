@@ -1,5 +1,6 @@
-# Local full-stack: Postgres + wardrobe.
-#   docker compose up --build
+# Local full-stack: Postgres + MinIO (S3-compatible image storage) + wardrobe.
+#   docker compose up --build          everything
+#   docker compose up -d db minio      just the backing services, for `npm run dev`
 # Then open http://localhost:3000
 services:
   db:
@@ -10,7 +11,7 @@ services:
       POSTGRES_PASSWORD: wardrobe
       POSTGRES_DB: wardrobe
     ports:
-      - "5432:5432"
+      - "${WARDROBE_PG_PORT:-5432}:5432"
     volumes:
       - wardrobe_pg:/var/lib/postgresql/data
     healthcheck:
@@ -19,20 +20,62 @@ services:
       timeout: 5s
       retries: 10
 
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: wardrobe
+      MINIO_ROOT_PASSWORD: wardrobe-secret
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - wardrobe_minio:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # creates the bucket and makes objects publicly readable (images only)
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 wardrobe wardrobe-secret &&
+      mc mb --ignore-existing local/wardrobe &&
+      mc anonymous set download local/wardrobe
+      "
+
   app:
     build: .
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     environment:
       DATABASE_URL: postgres://wardrobe:wardrobe@db:5432/wardrobe
       LOOKUP_PEPPER: local-dev-pepper-change-me
       RP_ID: localhost
       APP_ORIGIN: http://localhost:3000
       NODE_ENV: production
+      S3_ENDPOINT: http://minio:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: wardrobe
+      S3_ACCESS_KEY_ID: wardrobe
+      S3_SECRET_ACCESS_KEY: wardrobe-secret
+      S3_PUBLIC_URL: http://localhost:9000/wardrobe
+      S3_FORCE_PATH_STYLE: "true"
+      CRON_SECRET: local-cron-secret
     ports:
       - "3000:3000"
 
 volumes:
   wardrobe_pg:
+  wardrobe_minio:

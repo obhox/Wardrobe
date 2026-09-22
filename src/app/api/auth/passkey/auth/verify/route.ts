@@ -1,61 +1,50 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { verifyAuthenticationResponse } from "@simplewebauthn/server";
 import { prisma } from "@/lib/db";
-import { rpID, expectedOrigin } from "@/lib/auth/webauthn";
+import { rpID, expectedOrigin, parseTransports } from "@/lib/auth/webauthn";
+import { takeChallenge } from "@/lib/auth/challenge";
 import { createSession } from "@/lib/auth/session";
+import { error, json, readJson } from "@/lib/server/http";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => null);
-  if (!body?.id) return NextResponse.json({ error: "bad json" }, { status: 400 });
+  const body = (await readJson(req)) as { id?: string } | null;
+  if (!body?.id || typeof body.id !== "string") return error("bad request", 400);
+
+  const challenge = await takeChallenge("authenticate");
+  if (!challenge) return error("that took too long — try again", 400);
 
   const passkey = await prisma.passkey.findUnique({
     where: { credentialId: body.id },
     include: { user: true },
   });
-  if (!passkey) {
-    return NextResponse.json({ error: "unknown passkey" }, { status: 401 });
-  }
-
-  const challengeRow = await prisma.webAuthnChallenge.findFirst({
-    where: { kind: "authenticate" },
-    orderBy: { createdAt: "desc" },
-  });
-  if (!challengeRow || challengeRow.expiresAt < new Date()) {
-    return NextResponse.json({ error: "challenge expired" }, { status: 400 });
-  }
+  if (!passkey) return error("this passkey isn't on any wardrobe", 401);
 
   let verification;
   try {
     verification = await verifyAuthenticationResponse({
-      response: body,
-      expectedChallenge: challengeRow.challenge,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      response: body as any,
+      expectedChallenge: challenge,
       expectedOrigin: expectedOrigin(),
       expectedRPID: rpID(),
       credential: {
         id: passkey.credentialId,
         publicKey: new Uint8Array(passkey.publicKey),
         counter: Number(passkey.counter),
-        transports: passkey.transports?.split(",") as
-          | ("ble" | "hybrid" | "internal" | "nfc" | "usb")[]
-          | undefined,
+        transports: parseTransports(passkey.transports),
       },
     });
   } catch {
-    return NextResponse.json({ error: "verification failed" }, { status: 400 });
+    return error("the passkey couldn't be verified", 400);
   }
-
-  if (!verification.verified) {
-    return NextResponse.json({ error: "not verified" }, { status: 401 });
-  }
+  if (!verification.verified) return error("the passkey couldn't be verified", 401);
 
   await prisma.passkey.update({
     where: { id: passkey.id },
     data: { counter: BigInt(verification.authenticationInfo.newCounter) },
   });
-  await prisma.webAuthnChallenge.deleteMany({ where: { kind: "authenticate" } });
-
   await createSession(passkey.userId);
-  return NextResponse.json({ handle: passkey.user.handle });
+  return json({ handle: passkey.user.handle });
 }

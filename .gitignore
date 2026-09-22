@@ -48,3 +48,4 @@ next-env.d.ts
 # database dumps / local debug output — never commit
 *.sql
 backup-err.txt
+!.env.example

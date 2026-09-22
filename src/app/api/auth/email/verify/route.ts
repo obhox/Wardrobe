@@ -1,10 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { verifySecret, normalizeEmail, isValidEmail } from "@/lib/auth/crypto";
+import { normalizeEmail, isValidEmail } from "@/lib/auth/crypto";
 import { generateCombination, normalizeHandle } from "@/lib/auth/combination";
 import { createSession } from "@/lib/auth/session";
-import { checkRate, recordFailure, recordSuccess } from "@/lib/auth/rate-limit";
+import { hit, LIMITS } from "@/lib/auth/rate-limit";
+import { codeError, consumeCode } from "@/lib/server/codes";
+import { clientIp, error, isUniqueViolation, json, readJson, tooMany } from "@/lib/server/http";
+import { wardrobeCreateData } from "@/lib/wardrobe";
 
 export const dynamic = "force-dynamic";
 
@@ -15,95 +18,59 @@ const schema = z.object({
   code: z.string().min(4).max(8),
 });
 
-const MAX_ATTEMPTS = 6;
-
-// pick a handle that isn't taken: a creature word, then -2, -3, … if needed.
+// a creature handle that isn't taken, checked in one query
 async function uniqueHandle(): Promise<string> {
-  for (let i = 0; i < 50; i++) {
-    const base = normalizeHandle(generateCombination().handle);
-    const candidate = i === 0 ? base : `${base}-${i + 1}`;
-    const taken = await prisma.user.findUnique({ where: { handle: candidate } });
-    if (!taken) return candidate;
-  }
-  // extremely unlikely fallback
-  return normalizeHandle(`${generateCombination().handle}-${generateCombination().digit}${generateCombination().digit}`);
+  const bases = Array.from({ length: 6 }, () => normalizeHandle(generateCombination().handle));
+  const candidates = bases.flatMap((b) => [b, ...Array.from({ length: 8 }, (_, i) => `${b}-${Math.floor(Math.random() * 90) + 10 + i}`)]);
+  const taken = new Set(
+    (await prisma.user.findMany({ where: { handle: { in: candidates } }, select: { handle: true } })).map((u) => u.handle)
+  );
+  return candidates.find((c) => !taken.has(c)) ?? `${bases[0]}-${Date.now().toString(36)}`;
 }
 
 export async function POST(req: NextRequest) {
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "bad json" }, { status: 400 });
-  }
-  const parsed = schema.safeParse(body);
-  if (!parsed.success || !isValidEmail(parsed.data.email)) {
-    return NextResponse.json({ error: "invalid input" }, { status: 400 });
-  }
+  const parsed = schema.safeParse(await readJson(req));
+  if (!parsed.success || !isValidEmail(parsed.data.email)) return error("invalid input", 400);
   const email = normalizeEmail(parsed.data.email);
-  const code = parsed.data.code.trim();
 
-  const key = `email-verify:${email}`;
-  const rate = checkRate(key);
-  if (!rate.allowed) {
-    return NextResponse.json(
-      { error: "too many tries — wait a moment", retryAfterMs: rate.retryAfterMs },
-      { status: 429 }
-    );
+  const ipRate = await hit(`auth:ip:${clientIp(req)}`, LIMITS.authIp);
+  if (!ipRate.allowed) return tooMany(ipRate.retryAfterMs);
+
+  const result = await consumeCode(email, parsed.data.code.trim());
+  if (result !== "ok") {
+    const { message, status } = codeError(result);
+    return error(message, status);
   }
 
-  const record = await prisma.emailCode.findUnique({ where: { email } });
-  const live = record && record.expiresAt.getTime() > Date.now() && record.attempts < MAX_ATTEMPTS;
-  if (!live) {
-    recordFailure(key);
-    return NextResponse.json({ error: "that code expired — request a new one" }, { status: 401 });
-  }
-
-  const ok = await verifySecret(record.codeHash, code);
-  if (!ok) {
-    await prisma.emailCode.update({
-      where: { email },
-      data: { attempts: { increment: 1 } },
-    });
-    recordFailure(key);
-    return NextResponse.json({ error: "that code didn't match" }, { status: 401 });
-  }
-
-  // code is good — consume it
-  await prisma.emailCode.delete({ where: { email } });
-  recordSuccess(key);
-
-  // existing email account → sign in
   const existing = await prisma.user.findUnique({ where: { recoveryEmail: email } });
   if (existing) {
     await createSession(existing.id);
-    return NextResponse.json({ handle: existing.handle, created: false });
+    return json({ handle: existing.handle, created: false });
   }
 
-  // new passwordless account → create it (no combination set)
-  const handle = await uniqueHandle();
-  const user = await prisma.user.create({
-    data: {
-      handle,
-      recoveryEmail: email,
-      defaultTheme: "daylight",
-      wardrobes: {
-        create: {
-          title: `${handle}'s wardrobe`,
-          tagline: "everything, arranged just so.",
-          ground: "daylight",
-          sections: {
-            create: [
-              { name: "tops", icon: "✦", color: "cobalt", order: 0 },
-              { name: "shoes", icon: "✦", color: "terracotta", order: 1 },
-              { name: "bags", icon: "✦", color: "honey", order: 2 },
-            ],
-          },
+  // new passwordless account (no combination set)
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const handle = await uniqueHandle();
+      const user = await prisma.user.create({
+        data: {
+          handle,
+          recoveryEmail: email,
+          defaultTheme: "daylight",
+          wardrobes: { create: wardrobeCreateData("closet", { title: `${handle}'s wardrobe` }) },
         },
-      },
-    },
-  });
-
-  await createSession(user.id);
-  return NextResponse.json({ handle: user.handle, created: true });
+      });
+      await createSession(user.id);
+      return json({ handle: user.handle, created: true });
+    } catch (e) {
+      if (!isUniqueViolation(e)) throw e;
+      // raced: either the handle or the email was just taken — re-check email
+      const again = await prisma.user.findUnique({ where: { recoveryEmail: email } });
+      if (again) {
+        await createSession(again.id);
+        return json({ handle: again.handle, created: false });
+      }
+    }
+  }
+  return error("couldn't make your wardrobe — try again", 500);
 }

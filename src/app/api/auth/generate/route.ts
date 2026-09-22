@@ -7,11 +7,14 @@ export const dynamic = "force-dynamic";
 // Never stored server-side until they register.
 export async function GET() {
   const c = generateCombination();
-  return NextResponse.json({
-    phrase: c.phrase,
-    words: c.words,
-    digit: c.digit,
-    handle: c.handle,
-    entropyBits: estimateEntropyBits(),
-  });
+  return NextResponse.json(
+    {
+      phrase: c.phrase,
+      words: c.words,
+      digit: c.digit,
+      handle: c.handle,
+      entropyBits: estimateEntropyBits(),
+    },
+    { headers: { "cache-control": "no-store" } }
+  );
 }

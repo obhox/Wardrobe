@@ -1,10 +1,7 @@
 import "server-only";
 import argon2 from "argon2";
 import crypto from "crypto";
-
-// Pepper for the separate, constant-time account lookup hash (brief §24).
-// Set LOOKUP_PEPPER in production; falls back to a dev value otherwise.
-const LOOKUP_PEPPER = process.env.LOOKUP_PEPPER ?? "wardrobe-dev-pepper";
+import { env } from "@/lib/env";
 
 const ARGON_OPTS: argon2.Options = {
   type: argon2.argon2id,
@@ -32,10 +29,31 @@ export async function verifySecret(
 // exposing the combination, in constant time.
 export function lookupHash(normalizedCombination: string): string {
   return crypto
-    .createHmac("sha256", LOOKUP_PEPPER)
+    .createHmac("sha256", env.lookupPepper)
     .update(normalizedCombination)
     .digest("hex");
 }
+
+export function sha256(input: string): string {
+  return crypto.createHash("sha256").update(input).digest("hex");
+}
+
+// Short HMAC used to sign URLs we hand out (e.g. guest image proxy links).
+export function sign(value: string): string {
+  return crypto.createHmac("sha256", env.signingSecret).update(value).digest("base64url").slice(0, 22);
+}
+
+export function verifySignature(value: string, sig: string | null | undefined): boolean {
+  if (!sig) return false;
+  const expected = Buffer.from(sign(value));
+  const given = Buffer.from(sig);
+  return expected.length === given.length && crypto.timingSafeEqual(expected, given);
+}
+
+// A fixed argon2 hash to verify against when an account doesn't exist, so a
+// miss costs the same time as a hit (no user enumeration by timing).
+export const DUMMY_HASH =
+  "$argon2id$v=19$m=19456,t=2,p=1$ZHVtbXlzYWx0ZHVtbXk$" + "RdescudvJCsgt3ub+b+dWRWJTmaaJObG0Ud+1qeT0Nk";
 
 export function randomToken(bytes = 32): string {
   return crypto.randomBytes(bytes).toString("base64url");

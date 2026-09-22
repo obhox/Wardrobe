@@ -5,15 +5,18 @@ import crypto from "crypto";
 const prisma = new PrismaClient();
 
 // Deterministic demo combination so you can log in after seeding.
-const DEMO_COMBINATION = "linen · brass · moth · 7";
+// Sign in with handle "moth-7" + this combination.
+const DEMO_COMBINATION = "linen · brass · moth · button · 7";
 const DEMO_HANDLE = "moth-7";
 const LOOKUP_PEPPER = process.env.LOOKUP_PEPPER ?? "wardrobe-dev-pepper";
 
-function lookupHash(combination: string) {
-  return crypto
-    .createHmac("sha256", LOOKUP_PEPPER)
-    .update(combination.trim().toLowerCase())
-    .digest("hex");
+// must match normalizeCombination() in src/lib/auth/combination.ts
+function normalize(input: string) {
+  return input.toLowerCase().replace(/[·•,/|.\-_]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function lookupHash(value: string) {
+  return crypto.createHmac("sha256", LOOKUP_PEPPER).update(value).digest("hex");
 }
 
 async function main() {
@@ -25,8 +28,13 @@ async function main() {
     data: {
       handle: DEMO_HANDLE,
       displayName: "demo",
-      combinationHash: await argon2.hash(DEMO_COMBINATION.trim().toLowerCase()),
-      lookupHash: lookupHash(DEMO_COMBINATION),
+      combinationHash: await argon2.hash(normalize(DEMO_COMBINATION), {
+        type: argon2.argon2id,
+        memoryCost: 19456,
+        timeCost: 2,
+        parallelism: 1,
+      }),
+      lookupHash: lookupHash(`${DEMO_HANDLE}:${normalize(DEMO_COMBINATION)}`),
       defaultTheme: "daylight",
       recoveryEmail: "demo@wardrobe.local",
     },
@@ -37,6 +45,8 @@ async function main() {
       ownerId: user.id,
       title: "moth's wardrobe",
       tagline: "everything, arranged just so.",
+      icon: "✦",
+      order: 0,
       ground: "daylight",
       pattern: "none",
       accent: "cobalt",
@@ -70,6 +80,8 @@ async function main() {
     rotation: number;
     boughtAt?: string;
     targetPrice?: number;
+    sourceUrl?: string;
+    history?: number[];
   }> = [
     {
       name: "oversized linen shirt",
@@ -182,7 +194,10 @@ async function main() {
         "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=500&q=80",
       sectionId: wantSec.id,
       status: "want",
+      price: 92,
       targetPrice: 75,
+      sourceUrl: "https://example.com/products/gold-hoops",
+      history: [110, 104, 104, 98, 92],
       sizeTier: "small",
       hue: 0,
       posX: 0.12,
@@ -191,13 +206,27 @@ async function main() {
     },
   ];
 
+  const day = 24 * 60 * 60 * 1000;
   for (const it of demoItems) {
     await prisma.item.create({
       data: {
         wardrobeId: wardrobe.id,
         sectionId: it.sectionId,
         imageUrl: it.imageUrl,
-        cutoutUrl: it.imageUrl,
+        sourceUrl: it.sourceUrl,
+        currency: "USD",
+        lowestPrice: it.history ? Math.min(...it.history) : it.price,
+        ...(it.history
+          ? {
+              prices: {
+                create: it.history.map((price, i) => ({
+                  price,
+                  currency: "USD",
+                  checkedAt: new Date(Date.now() - (it.history!.length - i) * 3 * day),
+                })),
+              },
+            }
+          : {}),
         name: it.name,
         brand: it.brand,
         price: it.price,
@@ -213,6 +242,24 @@ async function main() {
       },
     });
   }
+
+  // a second wardrobe, to show the switcher
+  const wishlist = await prisma.wardrobe.create({
+    data: {
+      ownerId: user.id,
+      title: "wishlist",
+      tagline: "things i'm keeping an eye on.",
+      icon: "♡",
+      order: 1,
+      ground: "bubblegum",
+      pattern: "polka",
+      accent: "blush",
+      layoutMode: "gallery",
+      sections: { create: [{ name: "soon", color: "blush", icon: "✦", order: 0 }] },
+    },
+  });
+  await prisma.user.update({ where: { id: user.id }, data: { lastWardrobeId: wardrobe.id } });
+  void wishlist;
 
   console.log(`✦ seeded user "${DEMO_HANDLE}"`);
   console.log(`  combination: ${DEMO_COMBINATION}`);

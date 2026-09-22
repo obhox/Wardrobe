@@ -1,80 +1,92 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth/session";
-import { getUserWardrobeId } from "@/lib/wardrobe";
-import { clip, looseUrl } from "@/lib/links";
+import { wardrobeScope } from "@/lib/server/scope";
+import { itemFields, imageRef, optionalImageRef, sourceUrl } from "@/lib/server/schemas";
+import { persistImage } from "@/lib/server/item-images";
+import { hit, LIMITS } from "@/lib/auth/rate-limit";
+import { error, json, notFound, readJson, tooMany, unauthorized } from "@/lib/server/http";
+import { toItem } from "@/lib/wardrobe";
 
 export const dynamic = "force-dynamic";
 
+const MAX_ITEMS_PER_WARDROBE = 2000;
+
 const create = z.object({
-  imageUrl: z.preprocess(looseUrl, z.string().min(1)),
-  cutoutUrl: z.preprocess(looseUrl, z.string().nullable().optional()),
-  sourceUrl: z.preprocess(looseUrl, z.string().max(4000).nullable().optional()),
-  name: z.preprocess(clip(120), z.string().min(1)),
-  brand: z.preprocess(clip(80), z.string().nullable().optional()),
-  price: z.number().nonnegative().nullable().optional(),
-  currency: z.string().max(8).nullable().optional(),
-  status: z.enum(["owned", "want"]).default("owned"),
-  boughtAt: z.preprocess(clip(120), z.string().nullable().optional()),
-  notes: z.preprocess(clip(2000), z.string().nullable().optional()),
-  targetPrice: z.number().nonnegative().nullable().optional(),
-  sectionId: z.string().nullable().optional(),
-  sizeTier: z.enum(["hero", "large", "medium", "small"]).default("medium"),
-  hue: z.number().int().min(0).max(360).default(0),
-  posX: z.number().default(0.5),
-  posY: z.number().default(0.4),
-  rotation: z.number().default(0),
+  imageUrl: imageRef,
+  cutoutUrl: optionalImageRef,
+  sourceUrl,
+  ...itemFields,
+  status: itemFields.status.default("owned"),
+  sizeTier: itemFields.sizeTier.default("medium"),
+  hue: itemFields.hue.default(-1),
+  posX: itemFields.posX.default(0.5),
+  posY: itemFields.posY.default(0.4),
+  rotation: itemFields.rotation.default(0),
+  priceAlert: itemFields.priceAlert.default(true),
   sourceType: z.enum(["manual", "scraped"]).default("manual"),
 });
 
 // "is this link already in my wardrobe?" — the browser extension asks before
 // adding, so saving the same product twice is a choice, not an accident
 export async function GET(req: NextRequest) {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const { user, wardrobeId } = await wardrobeScope(req);
+  if (!user) return unauthorized();
+  if (!wardrobeId) return notFound();
 
-  const wardrobeId = await getUserWardrobeId(user.id);
-  if (!wardrobeId) return NextResponse.json({ error: "no wardrobe" }, { status: 404 });
-
-  const sourceUrl = req.nextUrl.searchParams.get("sourceUrl")?.trim();
-  if (!sourceUrl) return NextResponse.json({ error: "missing sourceUrl" }, { status: 400 });
+  const src = req.nextUrl.searchParams.get("sourceUrl")?.trim();
+  if (!src) return error("missing sourceUrl", 400);
 
   const items = await prisma.item.findMany({
-    where: { wardrobeId, sourceUrl },
-    select: { id: true, name: true, status: true },
+    where: { wardrobe: { ownerId: user.id }, sourceUrl: src },
+    select: { id: true, name: true, status: true, wardrobeId: true },
     orderBy: { createdAt: "desc" },
     take: 5,
   });
-  return NextResponse.json({ items });
+  return json({ items });
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const body = await readJson(req);
+  const { user, wardrobeId } = await wardrobeScope(req, body);
+  if (!user) return unauthorized();
+  if (!wardrobeId) return notFound();
 
-  const wardrobeId = await getUserWardrobeId(user.id);
-  if (!wardrobeId) return NextResponse.json({ error: "no wardrobe" }, { status: 404 });
-
-  const body = await req.json().catch(() => null);
   const parsed = create.safeParse(body);
-  if (!parsed.success)
-    return NextResponse.json(
-      { error: "invalid input", detail: parsed.error.flatten() },
-      { status: 400 }
-    );
-
-  // validate section ownership if provided
-  if (parsed.data.sectionId) {
-    const sec = await prisma.section.findFirst({
-      where: { id: parsed.data.sectionId, wardrobeId },
-      select: { id: true },
-    });
-    if (!sec) parsed.data.sectionId = null;
+  if (!parsed.success) {
+    return error("invalid input", 400, { detail: parsed.error.flatten().fieldErrors });
+  }
+  const rate = await hit(`items:${user.id}`, LIMITS.uploadPerUser);
+  if (!rate.allowed) return tooMany(rate.retryAfterMs);
+  if ((await prisma.item.count({ where: { wardrobeId } })) >= MAX_ITEMS_PER_WARDROBE) {
+    return error("this wardrobe is full — start another one", 400);
   }
 
+  const data = parsed.data;
+  if (data.sectionId) {
+    const sec = await prisma.section.findFirst({ where: { id: data.sectionId, wardrobeId }, select: { id: true } });
+    if (!sec) data.sectionId = null;
+  }
+
+  // copy photos into our bucket (no hotlinking, no inline blobs)
+  const imageUrl = (await persistImage(user.id, data.imageUrl, "original")) ?? data.imageUrl;
+  const cutoutUrl =
+    data.cutoutUrl && data.cutoutUrl !== data.imageUrl
+      ? await persistImage(user.id, data.cutoutUrl, "cutout")
+      : null;
+
+  const trackedPrice = data.price ?? null;
   const item = await prisma.item.create({
-    data: { ...parsed.data, wardrobeId },
+    data: {
+      ...data,
+      imageUrl,
+      cutoutUrl,
+      wardrobeId,
+      lowestPrice: trackedPrice,
+      ...(trackedPrice != null && data.sourceUrl
+        ? { prices: { create: { price: trackedPrice, currency: data.currency ?? "USD" } } }
+        : {}),
+    },
   });
-  return NextResponse.json(item);
+  return json(toItem(item));
 }

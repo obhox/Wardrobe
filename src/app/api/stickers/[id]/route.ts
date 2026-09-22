@@ -1,57 +1,38 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
-import { getUserWardrobeId } from "@/lib/wardrobe";
+import { fraction, rotation } from "@/lib/server/schemas";
+import { error, json, notFound, readJson, unauthorized } from "@/lib/server/http";
 
 export const dynamic = "force-dynamic";
 
+type Ctx = { params: Promise<{ id: string }> };
+
 const patch = z.object({
-  posX: z.number().optional(),
-  posY: z.number().optional(),
-  rotation: z.number().optional(),
-  scale: z.number().optional(),
+  posX: fraction.optional(),
+  posY: fraction.optional(),
+  rotation: rotation.optional(),
+  scale: z.number().min(0.3).max(4).optional(),
 });
 
-async function guard(userId: string, stickerId: string) {
-  const wardrobeId = await getUserWardrobeId(userId);
-  if (!wardrobeId) return null;
-  const s = await prisma.sticker.findFirst({
-    where: { id: stickerId, wardrobeId },
-    select: { id: true },
+export async function PATCH(req: NextRequest, { params }: Ctx) {
+  const user = await getCurrentUser();
+  if (!user) return unauthorized();
+  const { id } = await params;
+  const parsed = patch.safeParse(await readJson(req));
+  if (!parsed.success) return error("invalid input", 400);
+  const { count } = await prisma.sticker.updateMany({
+    where: { id, wardrobe: { ownerId: user.id } },
+    data: parsed.data,
   });
-  return s ? wardrobeId : null;
+  return count ? json({ ok: true }) : notFound();
 }
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(_req: NextRequest, { params }: Ctx) {
   const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!user) return unauthorized();
   const { id } = await params;
-  if (!(await guard(user.id, id)))
-    return NextResponse.json({ error: "not found" }, { status: 404 });
-
-  const body = await req.json().catch(() => null);
-  const parsed = patch.safeParse(body);
-  if (!parsed.success)
-    return NextResponse.json({ error: "invalid input" }, { status: 400 });
-
-  const sticker = await prisma.sticker.update({ where: { id }, data: parsed.data });
-  return NextResponse.json(sticker);
-}
-
-export async function DELETE(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const { id } = await params;
-  if (!(await guard(user.id, id)))
-    return NextResponse.json({ error: "not found" }, { status: 404 });
-
-  await prisma.sticker.delete({ where: { id } });
-  return NextResponse.json({ ok: true });
+  const { count } = await prisma.sticker.deleteMany({ where: { id, wardrobe: { ownerId: user.id } } });
+  return count ? json({ ok: true }) : notFound();
 }

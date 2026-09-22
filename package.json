@@ -1,6 +1,6 @@
 {
   "name": "wardrobe",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -8,19 +8,22 @@
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",
-    "db:push": "prisma db push",
     "db:migrate": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
     "ext:build": "node extension/build.mjs",
     "ext:dev": "node extension/build.mjs --dev",
     "ext:zip": "node extension/build.mjs --zip",
-    "ext:art": "node extension/store/render.mjs"
+    "ext:art": "node extension/store/render.mjs",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:migrate-images": "tsx scripts/migrate-inline-images.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1137.0",
+    "@imgly/background-removal": "^1.7.0",
     "@prisma/client": "^6.2.1",
     "@simplewebauthn/browser": "^13.1.0",
     "@simplewebauthn/server": "^13.1.1",
@@ -32,6 +35,8 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "resend": "^6.14.0",
+    "sharp": "^0.35.4",
+    "undici": "^8.11.0",
     "zod": "^3.24.1",
     "zustand": "^5.0.2"
   },

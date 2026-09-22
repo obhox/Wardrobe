@@ -1,75 +1,60 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth/session";
+import { verifySignature } from "@/lib/auth/crypto";
+import { RASTER_TYPES, safeFetch, sniffImage } from "@/lib/server/safe-fetch";
+import { Lru } from "@/lib/server/lru";
 
 export const dynamic = "force-dynamic";
 
-// Simple same-origin image proxy. Used so item cutouts (often hotlinked from
-// external shops) render from our origin — that keeps client-side screenshots
-// un-tainted and sidesteps third-party CORS. Read-only, images only.
+// Same-origin image proxy for third-party item photos (keeps screenshots
+// untainted and sidesteps hotlink blocks). Hardened:
+//   - only signed-in users, or a URL signed by the server (guest views)
+//   - SSRF-safe fetch (private addresses, redirects re-checked)
+//   - raster images only, sniffed from bytes; never SVG/HTML
+//   - served with a sandbox CSP + nosniff
 
-const MAX_BYTES = 8 * 1024 * 1024; // 8MB guard
+const MAX_BYTES = 8 * 1024 * 1024;
+const cache = new Lru<{ type: string; body: Buffer }>(200, 10 * 60 * 1000);
 
-function isBlockedHost(host: string): boolean {
-  const h = host.toLowerCase();
-  if (h === "localhost" || h.endsWith(".localhost") || h === "0.0.0.0") return true;
-  // crude private-range / loopback guard against SSRF
-  if (/^127\./.test(h) || /^10\./.test(h) || /^192\.168\./.test(h)) return true;
-  if (/^169\.254\./.test(h)) return true; // link-local (cloud metadata)
-  if (/^172\.(1[6-9]|2\d|3[01])\./.test(h)) return true;
-  if (h === "::1" || h.startsWith("fc") || h.startsWith("fd")) return true;
-  return false;
-}
+const SAFE_HEADERS = {
+  "x-content-type-options": "nosniff",
+  "content-security-policy": "default-src 'none'; sandbox",
+  "content-disposition": "inline",
+  "cross-origin-resource-policy": "cross-origin",
+};
 
 export async function GET(req: NextRequest) {
   const raw = req.nextUrl.searchParams.get("url");
   if (!raw) return NextResponse.json({ error: "missing url" }, { status: 400 });
 
-  let target: URL;
-  try {
-    target = new URL(raw);
-  } catch {
-    return NextResponse.json({ error: "invalid url" }, { status: 400 });
+  const signed = verifySignature(raw, req.nextUrl.searchParams.get("sig"));
+  if (!signed && !(await getCurrentUser())) {
+    return NextResponse.json({ error: "not signed in" }, { status: 401 });
   }
 
-  if (target.protocol !== "http:" && target.protocol !== "https:")
-    return NextResponse.json({ error: "unsupported protocol" }, { status: 400 });
-  if (isBlockedHost(target.hostname))
-    return NextResponse.json({ error: "blocked host" }, { status: 400 });
-
-  try {
-    const upstream = await fetch(target.toString(), {
-      headers: {
-        // some CDNs 403 without a UA / accept header
-        "user-agent": "Mozilla/5.0 (compatible; wardrobe/0.2; +https://wardrobe.app)",
-        accept: "image/*,*/*;q=0.8",
-      },
-      // don't forward cookies/credentials
-      redirect: "follow",
-    });
-
-    if (!upstream.ok)
-      return NextResponse.json({ error: "upstream error" }, { status: 502 });
-
-    const type = upstream.headers.get("content-type") ?? "";
-    if (!type.startsWith("image/"))
-      return NextResponse.json({ error: "not an image" }, { status: 415 });
-
-    const len = Number(upstream.headers.get("content-length") ?? 0);
-    if (len && len > MAX_BYTES)
-      return NextResponse.json({ error: "too large" }, { status: 413 });
-
-    const buf = await upstream.arrayBuffer();
-    if (buf.byteLength > MAX_BYTES)
-      return NextResponse.json({ error: "too large" }, { status: 413 });
-
-    return new NextResponse(buf, {
-      status: 200,
-      headers: {
-        "content-type": type,
-        "cache-control": "public, max-age=86400, s-maxage=86400, immutable",
-        "access-control-allow-origin": "*",
-      },
-    });
-  } catch {
-    return NextResponse.json({ error: "fetch failed" }, { status: 502 });
+  let hit = cache.get(raw);
+  if (!hit) {
+    try {
+      const res = await safeFetch(raw, { accept: "image/avif,image/webp,image/*;q=0.8", maxBytes: MAX_BYTES });
+      if (!res.ok) return NextResponse.json({ error: "upstream error" }, { status: 502 });
+      const type = sniffImage(res.body);
+      if (!type || !RASTER_TYPES.has(type)) {
+        return NextResponse.json({ error: "not an image" }, { status: 415 });
+      }
+      hit = { type, body: res.body };
+      cache.set(raw, hit);
+    } catch {
+      return NextResponse.json({ error: "fetch failed" }, { status: 502 });
+    }
   }
+
+  return new NextResponse(new Uint8Array(hit.body), {
+    status: 200,
+    headers: {
+      ...SAFE_HEADERS,
+      "content-type": hit.type,
+      "cache-control": signed ? "public, max-age=86400, immutable" : "private, max-age=86400",
+      "access-control-allow-origin": "*",
+    },
+  });
 }

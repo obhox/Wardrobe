@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import {
@@ -7,114 +7,63 @@ import {
   normalizeHandle,
   isValidHandle,
 } from "@/lib/auth/combination";
-import {
-  hashSecret,
-  lookupHash,
-  normalizeEmail,
-  isValidEmail,
-} from "@/lib/auth/crypto";
+import { hashSecret, lookupHash } from "@/lib/auth/crypto";
 import { createSession } from "@/lib/auth/session";
+import { hit, LIMITS } from "@/lib/auth/rate-limit";
+import { groundSchema } from "@/lib/server/schemas";
+import { clientIp, error, isUniqueViolation, json, readJson, tooMany } from "@/lib/server/http";
+import { wardrobeCreateData } from "@/lib/wardrobe";
 
 export const dynamic = "force-dynamic";
 
+// Create a combination account. An email is *not* taken here: it would be
+// unverified, and an unverified email lets someone squat another person's
+// address. It's added (with a code) from the account panel instead.
 const schema = z.object({
-  phrase: z.string().min(3),
+  phrase: z.string().min(3).max(200),
   handle: z.string().min(2).max(30),
   displayName: z.string().max(40).optional(),
-  defaultTheme: z.string().default("daylight"),
-  recoveryEmail: z.string().max(254).optional(),
+  defaultTheme: groundSchema.default("daylight"),
 });
 
 export async function POST(req: NextRequest) {
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "bad json" }, { status: 400 });
-  }
-
-  const parsed = schema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: "invalid input" }, { status: 400 });
-  }
+  const parsed = schema.safeParse(await readJson(req));
+  if (!parsed.success) return error("invalid input", 400);
   const { phrase, displayName, defaultTheme } = parsed.data;
 
+  const ipRate = await hit(`register:ip:${clientIp(req)}`, { limit: 10, windowMs: 60 * 60 * 1000 });
+  if (!ipRate.allowed) return tooMany(ipRate.retryAfterMs);
+  const authRate = await hit(`auth:ip:${clientIp(req)}`, LIMITS.authIp);
+  if (!authRate.allowed) return tooMany(authRate.retryAfterMs);
+
   if (!combinationStrengthOk(phrase)) {
-    return NextResponse.json(
-      { error: "combination too weak — need 3+ words and a digit" },
-      { status: 400 }
-    );
+    return error("combination too weak — need 4 words and a number", 400);
   }
 
-  // optional recovery email — validate only if one was given
-  let recoveryEmail: string | undefined;
-  const rawEmail = parsed.data.recoveryEmail?.trim();
-  if (rawEmail) {
-    if (!isValidEmail(rawEmail)) {
-      return NextResponse.json(
-        { error: "that email doesn't look right" },
-        { status: 400 }
-      );
-    }
-    recoveryEmail = normalizeEmail(rawEmail);
-  }
-
-  // user-chosen handle (public username)
   const handle = normalizeHandle(parsed.data.handle);
   if (!isValidHandle(handle)) {
-    return NextResponse.json(
-      { error: "handle must be 2–30 letters, numbers or hyphens" },
-      { status: 400 }
-    );
+    return error("handle must be 2–30 letters, numbers or hyphens", 400);
   }
 
   const normalized = normalizeCombination(phrase);
-  const lh = lookupHash(normalized);
-
-  // already exists?
-  const existing = await prisma.user.findUnique({ where: { lookupHash: lh } });
-  if (existing) {
-    return NextResponse.json(
-      { error: "that combination is taken — reroll one" },
-      { status: 409 }
-    );
-  }
-
-  // handle must be unique — user picks another if taken
-  const handleTaken = await prisma.user.findUnique({ where: { handle } });
-  if (handleTaken) {
-    return NextResponse.json(
-      { error: "that handle is taken — pick another" },
-      { status: 409 }
-    );
-  }
-
-  const user = await prisma.user.create({
-    data: {
-      handle,
-      displayName,
-      defaultTheme,
-      combinationHash: await hashSecret(normalized),
-      lookupHash: lh,
-      recoveryEmail,
-      wardrobes: {
-        create: {
-          title: `${handle}'s wardrobe`,
-          tagline: "everything, arranged just so.",
-          ground: defaultTheme,
-          sections: {
-            create: [
-              { name: "tops", icon: "✦", color: "cobalt", order: 0 },
-              { name: "shoes", icon: "✦", color: "terracotta", order: 1 },
-              { name: "bags", icon: "✦", color: "honey", order: 2 },
-            ],
-          },
+  try {
+    const user = await prisma.user.create({
+      data: {
+        handle,
+        displayName,
+        defaultTheme,
+        combinationHash: await hashSecret(normalized),
+        // kept for the unique index only; sign-in looks accounts up by handle
+        lookupHash: lookupHash(`${handle}:${normalized}`),
+        wardrobes: {
+          create: wardrobeCreateData("closet", { title: `${handle}'s wardrobe`, ground: defaultTheme }),
         },
       },
-    },
-  });
-
-  await createSession(user.id);
-
-  return NextResponse.json({ handle: user.handle });
+    });
+    await createSession(user.id);
+    return json({ handle: user.handle });
+  } catch (e) {
+    if (isUniqueViolation(e)) return error("that handle is taken — pick another", 409);
+    throw e;
+  }
 }

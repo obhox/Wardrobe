@@ -1,32 +1,31 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth/session";
-import { getUserWardrobeId } from "@/lib/wardrobe";
+import { wardrobeScope } from "@/lib/server/scope";
+import { fraction, rotation, stickerKindSchema } from "@/lib/server/schemas";
+import { error, json, notFound, readJson, unauthorized } from "@/lib/server/http";
 
 export const dynamic = "force-dynamic";
 
 const create = z.object({
-  kind: z.enum(["star", "cat", "scribble", "washi", "shrug"]),
-  posX: z.number().default(0.5),
-  posY: z.number().default(0.5),
-  rotation: z.number().default(0),
-  scale: z.number().default(1),
+  kind: stickerKindSchema,
+  posX: fraction.default(0.5),
+  posY: fraction.default(0.5),
+  rotation: rotation.default(0),
+  scale: z.number().min(0.3).max(4).default(1),
 });
 
 export async function POST(req: NextRequest) {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const wardrobeId = await getUserWardrobeId(user.id);
-  if (!wardrobeId) return NextResponse.json({ error: "no wardrobe" }, { status: 404 });
+  const body = await readJson(req);
+  const { user, wardrobeId } = await wardrobeScope(req, body);
+  if (!user) return unauthorized();
+  if (!wardrobeId) return notFound();
 
-  const body = await req.json().catch(() => null);
   const parsed = create.safeParse(body);
-  if (!parsed.success)
-    return NextResponse.json({ error: "invalid input" }, { status: 400 });
-
-  const sticker = await prisma.sticker.create({
-    data: { ...parsed.data, wardrobeId },
-  });
-  return NextResponse.json(sticker);
+  if (!parsed.success) return error("invalid input", 400);
+  if ((await prisma.sticker.count({ where: { wardrobeId } })) >= 100) {
+    return error("that's plenty of stickers", 400);
+  }
+  const sticker = await prisma.sticker.create({ data: { ...parsed.data, wardrobeId } });
+  return json(sticker);
 }

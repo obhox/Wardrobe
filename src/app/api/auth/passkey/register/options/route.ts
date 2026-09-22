@@ -1,17 +1,17 @@
-import { NextResponse } from "next/server";
 import { generateRegistrationOptions } from "@simplewebauthn/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
-import { rpID, rpName, CHALLENGE_TTL_MS } from "@/lib/auth/webauthn";
+import { rpID, rpName, parseTransports } from "@/lib/auth/webauthn";
+import { saveChallenge } from "@/lib/auth/challenge";
+import { json, unauthorized } from "@/lib/server/http";
 
 export const dynamic = "force-dynamic";
 
 export async function POST() {
   const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!user) return unauthorized();
 
   const existing = await prisma.passkey.findMany({ where: { userId: user.id } });
-
   const options = await generateRegistrationOptions({
     rpName: rpName(),
     rpID: rpID(),
@@ -21,24 +21,13 @@ export async function POST() {
     attestationType: "none",
     excludeCredentials: existing.map((c) => ({
       id: c.credentialId,
-      transports: c.transports?.split(",") as
-        | ("ble" | "hybrid" | "internal" | "nfc" | "usb")[]
-        | undefined,
+      transports: parseTransports(c.transports),
     })),
     authenticatorSelection: {
-      residentKey: "preferred",
+      residentKey: "required",
       userVerification: "preferred",
     },
   });
-
-  await prisma.webAuthnChallenge.create({
-    data: {
-      userId: user.id,
-      challenge: options.challenge,
-      kind: "register",
-      expiresAt: new Date(Date.now() + CHALLENGE_TTL_MS),
-    },
-  });
-
-  return NextResponse.json(options);
+  await saveChallenge(options.challenge, "register", user.id);
+  return json(options);
 }

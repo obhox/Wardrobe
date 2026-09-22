@@ -49,15 +49,19 @@ model User {
   recoveryEmail   String?  @unique // login + recovery email (magic code is sent here)
   recoveryCodeHash      String?   // hash of the short-lived emailed reset code
   recoveryCodeExpiresAt DateTime? // when that emailed code stops working
+  recoveryAttempts      Int       @default(0) // wrong emailed-code guesses; locks after a few
   dialPinHash     String? // optional short 2-digit "dial" PIN
   avatar          String?
   defaultTheme    String   @default("daylight")
+  displayCurrency String   @default("USD") // stats totals are converted into this
+  lastWardrobeId  String? // the wardrobe /studio opens by default
   createdAt       DateTime @default(now())
 
   passkeys          Passkey[]
   wardrobes         Wardrobe[]
   sessions          Session[]
   challenges        WebAuthnChallenge[]
+  notifications     Notification[]
 }
 
 // passwordless sign-in / sign-up codes, keyed by email (one active per email).
@@ -101,9 +105,11 @@ model WebAuthnChallenge {
 model Session {
   id        String   @id @default(cuid())
   userId    String
-  token     String   @unique // random opaque token stored in httpOnly cookie
+  token     String   @unique // sha256 of the opaque token in the httpOnly cookie (never the raw token)
   expiresAt DateTime
+  userAgent String? // shown in the account panel's session list
   createdAt DateTime @default(now())
+  lastSeenAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -122,6 +128,8 @@ model Wardrobe {
   shareCode    String?  @unique
   visibility   String   @default("private") // private | unlisted
   shareDetails Boolean  @default(false) // show item info to guest viewers
+  icon       String?    // small glyph shown in the wardrobe switcher
+  order      Int        @default(0)
   createdAt  DateTime   @default(now())
 
   owner    User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
@@ -172,13 +180,19 @@ model Item {
   sizeTier    String     @default("medium") // hero | large | medium | small
   hue         Int        @default(0) // 0-360 for "arrange by color"
   sourceType  SourceType @default(manual)
+  // price tracking (want items with a sourceUrl)
+  priceAlert    Boolean   @default(true)
+  lowestPrice   Float?
+  lastCheckedAt DateTime?
   createdAt   DateTime   @default(now())
 
   wardrobe Wardrobe @relation(fields: [wardrobeId], references: [id], onDelete: Cascade)
   section  Section? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  prices   PriceSnapshot[]
 
   @@index([wardrobeId])
   @@index([sectionId])
+  @@index([status, lastCheckedAt])
 }
 
 model Sticker {
@@ -192,4 +206,42 @@ model Sticker {
   wardrobe   Wardrobe @relation(fields: [wardrobeId], references: [id], onDelete: Cascade)
 
   @@index([wardrobeId])
+}
+
+// one observed price for a tracked item (written by the price checker)
+model PriceSnapshot {
+  id        String   @id @default(cuid())
+  itemId    String
+  price     Float
+  currency  String?
+  checkedAt DateTime @default(now())
+  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId, checkedAt])
+}
+
+// in-app notices (price drops, target price hit)
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  kind      String // price_drop | target_hit
+  itemId    String?
+  body      String
+  readAt    DateTime?
+  emailedAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+}
+
+// fixed-window rate limiter shared by every instance (replaces the old
+// in-memory map, which reset on deploy and never expired keys)
+model RateLimit {
+  key         String   @id
+  count       Int      @default(0)
+  windowStart DateTime @default(now())
+  blockedUntil DateTime?
+
+  @@index([windowStart])
 }
