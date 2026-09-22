@@ -38,7 +38,7 @@ services:
       timeout: 5s
       retries: 10
 
-  # creates the bucket and makes objects publicly readable (images only)
+  # creates the bucket; anonymous users may GET objects but not list them
   minio-init:
     image: minio/mc:latest
     depends_on:
@@ -48,7 +48,8 @@ services:
       /bin/sh -c "
       mc alias set local http://minio:9000 wardrobe wardrobe-secret &&
       mc mb --ignore-existing local/wardrobe &&
-      mc anonymous set download local/wardrobe
+      printf '%s' '{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"AWS\":[\"*\"]},\"Action\":[\"s3:GetObject\"],\"Resource\":[\"arn:aws:s3:::wardrobe/*\"]}]}' > /tmp/p.json &&
+      mc anonymous set-json /tmp/p.json local/wardrobe
       "
 
   app:
