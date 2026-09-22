@@ -28,7 +28,7 @@ export default function PriceField({
   return (
     <div
       className={
-        "flex min-w-0 items-stretch overflow-hidden rounded-lg border border-rule bg-ground/40 text-sm focus-within:border-ink " +
+        "flex min-w-0 items-stretch overflow-hidden rounded-lg border border-rule bg-ground/40 text-base focus-within:border-ink sm:text-sm " +
         className
       }
     >
@@ -42,7 +42,7 @@ export default function PriceField({
             aria-label="currency"
             value={current}
             onChange={(e) => onCurrency(e.target.value)}
-            className={`h-full cursor-pointer appearance-none bg-transparent pl-3 pr-7 ${py} outline-none`}
+            className={`h-full cursor-pointer appearance-none bg-transparent pl-3 pr-7 ${py} outline-none focus-visible:bg-ink/5`}
           >
             {CURRENCIES.map((c) => (
               <option key={c.code} value={c.code}>

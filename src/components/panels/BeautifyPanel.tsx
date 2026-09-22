@@ -1,16 +1,15 @@
 "use client";
-import { motion } from "framer-motion";
+import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { GROUNDS, PATTERNS, ACCENTS, PRESETS } from "@/lib/theme";
-import type { StickerKind } from "@/lib/types";
+import { isCustomGround } from "@/lib/ground";
+import { STICKERS } from "@/lib/stickers";
+import { useDebounced } from "@/lib/hooks";
+import Dialog, { SheetHeader } from "@/components/ui/Dialog";
+import { Group, Pill, fieldClass } from "@/components/ui/controls";
+import StickerArt from "@/components/canvas/StickerArt";
 
-const STICKERS: { kind: StickerKind; glyph: string }[] = [
-  { kind: "star", glyph: "✦" },
-  { kind: "cat", glyph: "ฅ^•ﻌ•^ฅ" },
-  { kind: "scribble", glyph: "〜" },
-  { kind: "washi", glyph: "▰▱▰" },
-  { kind: "shrug", glyph: "¯\\_(ツ)_/¯" },
-];
+const WARDROBE_ICONS = ["✦", "○", "♡", "✿", "◇", "☂", "⚙", "♪", "☀", "✂", "☾", "△"];
 
 export default function BeautifyPanel() {
   const setPanel = useStore((s) => s.setPanel);
@@ -19,133 +18,151 @@ export default function BeautifyPanel() {
   const setTitle = useStore((s) => s.setTitle);
   const addSticker = useStore((s) => s.addSticker);
 
+  const [title, setTitleDraft] = useState(wardrobe?.title ?? "");
+  const [tagline, setTagline] = useState(wardrobe?.tagline ?? "");
+  const saveTitle = useDebounced((patch: { title?: string; tagline?: string | null }) => setTitle(patch), 600);
+  const saveHex = useDebounced((hex: string) => setTheme({ ground: hex as `#${string}` }), 250);
+
   if (!wardrobe) return null;
   const { theme } = wardrobe;
+  const close = () => setPanel(null);
+  const custom = isCustomGround(theme.ground);
 
   return (
-    <div className="fixed inset-0 z-[55]" onClick={() => setPanel(null)}>
-      <motion.aside
-        initial={{ x: 360 }}
-        animate={{ x: 0 }}
-        exit={{ x: 360 }}
-        transition={{ type: "spring", stiffness: 320, damping: 34 }}
-        onClick={(e) => e.stopPropagation()}
-        className="thin-scroll absolute right-0 top-0 h-full w-full max-w-[330px] overflow-y-auto border-l border-rule bg-panel p-5 shadow-[-12px_0_40px_var(--shadow)]"
-      >
-        <div className="flex items-center justify-between">
-          <h2 className="font-[family-name:var(--font-display)] text-lg lowercase">beautify</h2>
-          <button onClick={() => setPanel(null)} className="text-sm lowercase text-ink-soft">close ×</button>
+    <Dialog title="beautify" variant="sheet" onClose={close} labelledBy="beautify-title">
+      <SheetHeader id="beautify-title" title="beautify" onClose={close} />
+
+      <Group label="ground">
+        <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="ground">
+          {GROUNDS.map((g) => (
+            <button
+              key={g.id}
+              role="radio"
+              aria-checked={theme.ground === g.id}
+              onClick={() => setTheme({ ground: g.id })}
+              className={
+                "flex flex-col items-center gap-1 rounded-lg border p-2 text-[11px] lowercase " +
+                (theme.ground === g.id ? "border-ink" : "border-rule")
+              }
+            >
+              <span className="h-8 w-full rounded" style={{ background: g.swatch }} />
+              {g.label}
+            </button>
+          ))}
         </div>
-
-        <Section label="ground">
-          <div className="grid grid-cols-3 gap-2">
-            {GROUNDS.map((g) => (
-              <button
-                key={g.id}
-                onClick={() => setTheme({ ground: g.id })}
-                className={
-                  "flex flex-col items-center gap-1 rounded-lg border p-2 text-[11px] lowercase " +
-                  (theme.ground === g.id ? "border-ink" : "border-rule")
-                }
-              >
-                <span className="h-8 w-full rounded" style={{ background: g.swatch }} />
-                {g.label}
-              </button>
-            ))}
-          </div>
-        </Section>
-
-        <Section label="pattern">
-          <div className="flex flex-wrap gap-1.5">
-            {PATTERNS.map((p) => (
-              <Pill key={p.id} on={theme.pattern === p.id} onClick={() => setTheme({ pattern: p.id })}>
-                {p.label}
-              </Pill>
-            ))}
-          </div>
-        </Section>
-
-        <Section label="accent">
-          <div className="flex gap-2">
-            {ACCENTS.map((a) => (
-              <button
-                key={a.id}
-                onClick={() => setTheme({ accent: a.id })}
-                aria-label={a.id}
-                className={
-                  "h-7 w-7 rounded-full border-2 " +
-                  (theme.accent === a.id ? "border-ink" : "border-transparent")
-                }
-                style={{ background: a.hex }}
-              />
-            ))}
-          </div>
-        </Section>
-
-        <Section label="title + tagline">
+        <label className="mt-2 flex items-center gap-3 rounded-lg border border-rule p-2 text-[11px] lowercase text-ink-soft">
           <input
-            value={wardrobe.title}
-            onChange={(e) => setTitle(e.target.value, wardrobe.tagline ?? undefined)}
-            className="mb-2 w-full rounded-lg border border-rule bg-ground/40 px-3 py-2 text-sm lowercase outline-none"
+            type="color"
+            value={custom ? theme.ground : "#c9b8e8"}
+            onChange={(e) => saveHex(e.target.value)}
+            className="h-8 w-12 cursor-pointer rounded border-0 bg-transparent p-0"
+            aria-label="custom ground colour"
           />
-          <input
-            value={wardrobe.tagline ?? ""}
-            onChange={(e) => setTitle(wardrobe.title, e.target.value)}
-            placeholder="tagline"
-            className="w-full rounded-lg border border-rule bg-ground/40 px-3 py-2 text-sm lowercase outline-none"
-          />
-        </Section>
+          <span className={custom ? "text-ink" : ""}>
+            {custom ? `custom ${theme.ground}` : "any colour — ink and shadow adjust to stay readable"}
+          </span>
+        </label>
+      </Group>
 
-        <Section label="stickers">
-          <div className="flex flex-wrap gap-2">
-            {STICKERS.map((s) => (
-              <button
-                key={s.kind}
-                onClick={() => addSticker(s.kind)}
-                className="rounded-lg border border-rule px-2 py-1.5 text-sm hover:bg-ink/5"
-                title={`add ${s.kind}`}
-              >
-                {s.glyph}
-              </button>
-            ))}
-          </div>
-          <p className="mt-1 text-[11px] lowercase text-ink-soft">double-click a sticker on the canvas to remove it.</p>
-        </Section>
+      <Group label="pattern">
+        <div className="flex flex-wrap gap-1.5">
+          {PATTERNS.map((p) => (
+            <Pill key={p.id} on={theme.pattern === p.id} onClick={() => setTheme({ pattern: p.id })}>
+              {p.label}
+            </Pill>
+          ))}
+        </div>
+      </Group>
 
-        <Section label="themes">
-          <div className="grid grid-cols-2 gap-2">
-            {PRESETS.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => setTheme({ ground: p.ground, pattern: p.pattern, accent: p.accent })}
-                className="rounded-lg border border-rule px-2 py-2 text-xs lowercase hover:bg-ink/5"
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-        </Section>
-      </motion.aside>
-    </div>
-  );
-}
+      <Group label="accent — pins, badges and highlights">
+        <div className="flex gap-2" role="radiogroup" aria-label="accent">
+          {ACCENTS.map((a) => (
+            <button
+              key={a.id}
+              role="radio"
+              aria-checked={theme.accent === a.id}
+              onClick={() => setTheme({ accent: a.id })}
+              aria-label={a.id}
+              className={"h-7 w-7 rounded-full border-2 " + (theme.accent === a.id ? "border-ink" : "border-transparent")}
+              style={{ background: a.hex }}
+            />
+          ))}
+        </div>
+      </Group>
 
-function Section({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="mt-6">
-      <div className="mb-2 text-xs lowercase text-ink-soft">{label}</div>
-      {children}
-    </div>
-  );
-}
+      <Group label="title + tagline">
+        <div className="mb-2 flex flex-wrap gap-1" role="radiogroup" aria-label="wardrobe icon">
+          {WARDROBE_ICONS.map((ic) => (
+            <button
+              key={ic}
+              role="radio"
+              aria-checked={(wardrobe.icon ?? "✦") === ic}
+              aria-label={`icon ${ic}`}
+              onClick={() => setTitle({ icon: ic })}
+              className={"h-7 w-7 rounded-md text-sm " + ((wardrobe.icon ?? "✦") === ic ? "bg-ink text-panel" : "hover:bg-ink/5")}
+            >
+              {ic}
+            </button>
+          ))}
+        </div>
+        <input
+          aria-label="title"
+          value={title}
+          maxLength={60}
+          onChange={(e) => {
+            setTitleDraft(e.target.value);
+            if (e.target.value.trim()) saveTitle({ title: e.target.value.trim() });
+          }}
+          className={`${fieldClass} mb-2`}
+        />
+        <input
+          aria-label="tagline"
+          value={tagline}
+          maxLength={120}
+          onChange={(e) => {
+            setTagline(e.target.value);
+            saveTitle({ tagline: e.target.value || null });
+          }}
+          placeholder="tagline"
+          className={fieldClass}
+        />
+      </Group>
 
-function Pill({ on, children, onClick }: { on: boolean; children: React.ReactNode; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className={"rounded-full px-2.5 py-1 text-xs lowercase " + (on ? "bg-ink text-panel" : "border border-rule hover:bg-ink/5")}
-    >
-      {children}
-    </button>
+      <Group label="stickers">
+        <div className="flex flex-wrap gap-2">
+          {STICKERS.map((s) => (
+            <button
+              key={s.kind}
+              onClick={() => addSticker(s.kind)}
+              className="flex h-11 min-w-11 items-center justify-center overflow-hidden rounded-lg border border-rule px-2 hover:bg-ink/5"
+              aria-label={`add ${s.label}`}
+              title={`add ${s.label}`}
+            >
+              <span className="pointer-events-none origin-center scale-[0.7]">
+                <StickerArt kind={s.kind} />
+              </span>
+            </button>
+          ))}
+        </div>
+        <p className="mt-2 text-[11px] lowercase text-ink-soft">
+          drag stickers anywhere. hover or tab to one for rotate, size and remove.
+        </p>
+      </Group>
+
+      <Group label="themes">
+        <div className="grid grid-cols-2 gap-2">
+          {PRESETS.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => setTheme({ ground: p.ground, pattern: p.pattern, accent: p.accent })}
+              className="flex items-center gap-2 rounded-lg border border-rule px-2 py-2 text-xs lowercase hover:bg-ink/5"
+            >
+              <span aria-hidden className="h-4 w-4 rounded-full border border-rule" style={{ background: GROUNDS.find((g) => g.id === p.ground)?.swatch }} />
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </Group>
+    </Dialog>
   );
 }

@@ -1,11 +1,11 @@
 "use client";
 import { useState } from "react";
-import { proxiedSrc } from "@/lib/img";
 import { formatMoney } from "@/lib/currency";
 
 export interface GuestItem {
   id: string;
-  src: string;
+  src: string; // already a displayable URL (signed proxy or our bucket)
+  cut?: boolean;
   name: string;
   status: "owned" | "want";
   size: number;
@@ -65,10 +65,10 @@ export default function GuestCutout({
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={proxiedSrc(item.src)}
+          src={item.src}
           alt={item.name}
-          crossOrigin="anonymous"
-          className="cutout-shadow object-contain"
+          loading="lazy"
+          className={"object-contain " + (item.status === "want" ? "cutout-shadow-soft " : "cutout-shadow ") + (item.cut ? "" : "rounded-2xl bg-panel/55 p-1.5")}
           style={
             gallery
               ? { maxWidth: "88%", maxHeight: "82%", rotate: `${item.rotation}deg` }
@@ -76,7 +76,7 @@ export default function GuestCutout({
           }
         />
         {item.status === "want" && (
-          <span className="absolute -right-1 -top-1 rounded-full bg-blush px-1.5 py-0.5 text-[10px] lowercase text-white shadow">
+          <span className="accent-pin absolute -right-1 -top-1 rounded-full px-1.5 py-0.5 text-[10px] lowercase shadow">
             ✦ want
           </span>
         )}
@@ -111,7 +111,7 @@ export default function GuestCutout({
             <a
               href={item.sourceUrl}
               target="_blank"
-              rel="noreferrer"
+              rel="noreferrer noopener nofollow"
               className="mt-2 inline-block text-[11px] lowercase underline underline-offset-4"
             >
               view item ↗

@@ -1,7 +1,7 @@
 "use client";
-import { motion } from "framer-motion";
 import { useStore } from "@/lib/store";
 import type { LayoutMode, SortKey } from "@/lib/types";
+import Dialog from "@/components/ui/Dialog";
 
 const LAYOUTS: { id: LayoutMode; label: string }[] = [
   { id: "free", label: "free / collage" },
@@ -19,6 +19,8 @@ const SORTS: { id: SortKey; label: string }[] = [
   { id: "az", label: "a–z" },
 ];
 
+// Layout × sort (brief §16). Arranged layouts are computed live, so your
+// free-form collage is always there to come back to.
 export default function ArrangePopover() {
   const setPanel = useStore((s) => s.setPanel);
   const wardrobe = useStore((s) => s.payload?.wardrobe);
@@ -27,56 +29,63 @@ export default function ArrangePopover() {
   const tidyUp = useStore((s) => s.tidyUp);
 
   if (!wardrobe) return null;
+  const free = wardrobe.layoutMode === "free";
 
   return (
-    <div className="fixed inset-0 z-[55]" onClick={() => setPanel(null)}>
-      <motion.div
-        initial={{ opacity: 0, y: 10, scale: 0.97 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        onClick={(e) => e.stopPropagation()}
-        className="absolute bottom-24 right-3 w-[min(16rem,calc(100vw-1.5rem))] rounded-2xl border border-rule bg-panel p-4 shadow-[0_18px_44px_var(--shadow)] sm:bottom-20 sm:right-5"
-      >
-        <div className="text-xs lowercase text-ink-soft">layout</div>
-        <div className="mt-2 grid grid-cols-2 gap-1.5">
-          {LAYOUTS.map((l) => (
-            <button
-              key={l.id}
-              onClick={() => setLayout(l.id)}
-              className={
-                "rounded-lg px-2 py-1.5 text-xs lowercase " +
-                (wardrobe.layoutMode === l.id ? "bg-ink text-panel" : "border border-rule hover:bg-ink/5")
-              }
-            >
-              {l.label}
-            </button>
-          ))}
-        </div>
+    <Dialog title="arrange" variant="popover" onClose={() => setPanel(null)}>
+      <div className="text-xs lowercase text-ink-soft">layout</div>
+      <div className="mt-2 grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="layout">
+        {LAYOUTS.map((l) => (
+          <button
+            key={l.id}
+            role="radio"
+            aria-checked={wardrobe.layoutMode === l.id}
+            onClick={() => setLayout(l.id)}
+            className={
+              "rounded-lg px-2 py-1.5 text-xs lowercase " +
+              (wardrobe.layoutMode === l.id ? "bg-ink text-panel" : "border border-rule hover:bg-ink/5")
+            }
+          >
+            {l.label}
+          </button>
+        ))}
+      </div>
 
-        <div className="mt-4 text-xs lowercase text-ink-soft">sort</div>
-        <div className="mt-2 flex flex-col gap-1">
-          {SORTS.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => setSort(s.id)}
-              className={
-                "rounded-lg px-2 py-1.5 text-left text-xs lowercase " +
-                (wardrobe.sortKey === s.id ? "bg-ink text-panel" : "hover:bg-ink/5")
-              }
-            >
-              {s.label}
-            </button>
-          ))}
-        </div>
+      <div className="mt-4 text-xs lowercase text-ink-soft">sort</div>
+      <div className="mt-2 flex flex-col gap-1" role="radiogroup" aria-label="sort">
+        {SORTS.map((s) => (
+          <button
+            key={s.id}
+            role="radio"
+            aria-checked={wardrobe.sortKey === s.id}
+            onClick={() => setSort(s.id)}
+            className={
+              "rounded-lg px-2 py-1.5 text-left text-xs lowercase " +
+              (wardrobe.sortKey === s.id ? "bg-ink text-panel" : "hover:bg-ink/5")
+            }
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
 
-        {wardrobe.layoutMode === "free" && (
+      {free ? (
+        <>
           <button
             onClick={() => tidyUp()}
             className="mt-4 w-full rounded-lg border border-rule py-2 text-xs lowercase hover:bg-ink/5"
           >
-            tidy up
+            tidy up (follows the sort)
           </button>
-        )}
-      </motion.div>
-    </div>
+          <p className="mt-2 text-[11px] lowercase text-ink-soft">
+            the collage keeps your hand placement — sort applies when you tidy up, and to the other layouts.
+          </p>
+        </>
+      ) : (
+        <p className="mt-3 text-[11px] lowercase text-ink-soft">
+          your free collage is kept — switch back any time.
+        </p>
+      )}
+    </Dialog>
   );
 }

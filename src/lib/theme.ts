@@ -1,6 +1,6 @@
-import type { Ground, Pattern, Accent, SizeTier } from "./types";
+import type { PresetGround, Pattern, Accent, SizeTier } from "./types";
 
-export const GROUNDS: { id: Ground; label: string; swatch: string }[] = [
+export const GROUNDS: { id: PresetGround; label: string; swatch: string }[] = [
   { id: "daylight", label: "daylight", swatch: "#a9c4f5" },
   { id: "bone", label: "bone", swatch: "#f3efe6" },
   { id: "sage", label: "sage mist", swatch: "#d7e0cc" },
@@ -42,7 +42,7 @@ export const PATTERN_CLASS: Record<Pattern, string> = {
 export const PRESETS: {
   id: string;
   label: string;
-  ground: Ground;
+  ground: PresetGround;
   pattern: Pattern;
   accent: Accent;
 }[] = [
@@ -50,6 +50,8 @@ export const PRESETS: {
   { id: "bone-studio", label: "bone studio", ground: "bone", pattern: "grid", accent: "brass" },
   { id: "midnight", label: "midnight", ground: "slate", pattern: "dots", accent: "honey" },
   { id: "bubblegum", label: "bubblegum", ground: "bubblegum", pattern: "polka", accent: "blush" },
+  { id: "sage-garden", label: "sage garden", ground: "sage", pattern: "gingham", accent: "olive" },
+  { id: "butter-diary", label: "butter diary", ground: "butter", pattern: "grid", accent: "terracotta" },
 ];
 
 // longest-edge sizes per tier (brief §15)

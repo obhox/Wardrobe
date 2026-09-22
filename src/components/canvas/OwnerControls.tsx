@@ -1,7 +1,8 @@
 "use client";
 import { useStore } from "@/lib/store";
 
-export default function OwnerControls({ onToggleDir }: { onToggleDir: () => void }) {
+// Quiet corner controls (brief §18) — no SaaS chrome.
+export default function OwnerControls() {
   const setPanel = useStore((s) => s.setPanel);
   const saving = useStore((s) => s.saving);
 
@@ -10,31 +11,24 @@ export default function OwnerControls({ onToggleDir }: { onToggleDir: () => void
 
   return (
     <>
-      {/* mobile: open directory */}
-      <button
-        data-noshot="true"
-        onClick={onToggleDir}
-        className={`absolute left-4 top-4 z-20 md:hidden ${btn}`}
-        aria-label="open directory"
-      >
-        ☰ directory
-      </button>
-
-      {/* saving whisper */}
       {saving && (
         <div
           data-noshot="true"
+          role="status"
           className="absolute right-4 top-4 z-20 text-xs lowercase text-ink-soft"
         >
           saving…
         </div>
       )}
 
-      {/* quiet corner controls — wrap (never clip) on narrow screens */}
-      <div
+      <nav
         data-noshot="true"
-        className="absolute bottom-4 left-3 right-3 z-20 flex flex-wrap items-center justify-end gap-2 sm:bottom-5 sm:left-auto sm:right-5"
+        aria-label="canvas controls"
+        className="absolute inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-20 flex flex-wrap items-center justify-end gap-2 sm:bottom-5 sm:left-auto sm:right-5"
       >
+        <button onClick={() => setPanel("stats")} className={btn}>
+          stats
+        </button>
         <button onClick={() => setPanel("share")} className={btn}>
           share
         </button>
@@ -50,7 +44,7 @@ export default function OwnerControls({ onToggleDir }: { onToggleDir: () => void
         >
           + add
         </button>
-      </div>
+      </nav>
     </>
   );
 }

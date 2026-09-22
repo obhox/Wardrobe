@@ -16,7 +16,8 @@ export function sortItems(
         (a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)
       );
     case "color":
-      return copy.sort((a, b) => a.hue - b.hue);
+      // rainbow first, colourless (hue -1) items trail at the end
+      return copy.sort((a, b) => (a.hue < 0 ? 999 : a.hue) - (b.hue < 0 ? 999 : b.hue));
     case "section":
       return copy.sort(
         (a, b) =>
@@ -129,12 +130,29 @@ function groupBySection(items: Item[], sections: Section[]) {
   return groups.filter((g) => g.items.length > 0);
 }
 
-// "tidy up" in free mode: scatter into a loose collage that avoids the corners.
-export function tidyScatter(items: Item[]): Placement[] {
-  return items.map((it, i) => ({
+// "tidy up" in free mode: scatter into a loose collage that avoids the corners,
+// following the current sort (so "by color" tidies into a loose rainbow).
+export function tidyScatter(items: Item[], sortKey: SortKey = "recent", sections: Section[] = []): Placement[] {
+  return sortItems(items, sortKey, sections).map((it, i) => ({
     id: it.id,
     posX: 0.12 + ((i * 0.37 + jitter(i, 0.06) + 0.5) % 0.76),
     posY: 0.16 + ((i * 0.29 + jitter(i + 5, 0.06) + 0.5) % 0.68),
     rotation: jitter(i + 2, 12),
   }));
+}
+
+// Section labels for shelves / columns (drawn as rails on the canvas).
+export function sectionRails(
+  items: Item[],
+  sections: Section[],
+  mode: LayoutMode
+): { id: string; label: string; x: number; y: number }[] {
+  if (mode !== "shelves" && mode !== "columns") return [];
+  const groups = groupBySection(items, sections);
+  const n = groups.length;
+  return groups.map((g, i) =>
+    mode === "shelves"
+      ? { id: g.section.id, label: g.section.name, x: 0.02, y: (i + 0.7) / (n + 1) }
+      : { id: g.section.id, label: g.section.name, x: (i + 0.6) / (n + 1), y: 0.06 }
+  );
 }

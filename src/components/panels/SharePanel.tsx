@@ -1,15 +1,19 @@
 "use client";
 import { useState } from "react";
-import { motion } from "framer-motion";
 import { useStore } from "@/lib/store";
 import { captureStage, downloadBlob, shareImage } from "@/lib/screenshot";
+import { track } from "@/lib/analytics";
+import Dialog, { SheetHeader } from "@/components/ui/Dialog";
+import { Group, Toggle } from "@/components/ui/controls";
 
 export default function SharePanel() {
   const setPanel = useStore((s) => s.setPanel);
   const wardrobe = useStore((s) => s.payload?.wardrobe);
-  const sections = useStore((s) => s.payload?.sections ?? []);
+  const sections = useStore((s) => s.payload?.sections);
   const setShare = useStore((s) => s.setShare);
+  const rotateShare = useStore((s) => s.rotateShare);
   const setShareDetails = useStore((s) => s.setShareDetails);
+  const setSectionsShared = useStore((s) => s.setSectionsShared);
   const updateSection = useStore((s) => s.updateSection);
 
   const [busy, setBusy] = useState(false);
@@ -18,23 +22,17 @@ export default function SharePanel() {
   const [note, setNote] = useState<string | null>(null);
 
   if (!wardrobe) return null;
-
+  const close = () => setPanel(null);
   const shared = wardrobe.visibility === "unlisted" && !!wardrobe.shareCode;
-  const link =
-    shared && typeof window !== "undefined"
-      ? `${window.location.origin}/w/${wardrobe.shareCode}`
-      : "";
+  const link = shared && typeof window !== "undefined" ? `${window.location.origin}/w/${wardrobe.shareCode}` : "";
 
-  async function toggle(enabled: boolean) {
+  async function run(fn: () => Promise<void>, fail: string) {
     setBusy(true);
     setNote(null);
     try {
-      await setShare(enabled);
-      if (enabled && typeof window !== "undefined" && (window as any).falorb) {
-        (window as any).falorb.track("wardrobe_shared");
-      }
+      await fn();
     } catch {
-      setNote("couldn't update sharing — try again.");
+      setNote(fail);
     } finally {
       setBusy(false);
     }
@@ -46,21 +44,18 @@ export default function SharePanel() {
       setCopied(true);
       setTimeout(() => setCopied(false), 1600);
     } catch {
-      setNote("copy failed — select the link and copy manually.");
+      setNote("copy failed — select the link and copy it by hand.");
     }
   }
 
   async function shareLink() {
-    const nav = navigator as Navigator & { share?: (d: ShareData) => Promise<void> };
-    if (nav.share) {
+    if (navigator.share) {
       try {
-        await nav.share({ title: wardrobe!.title, url: link });
+        await navigator.share({ title: wardrobe!.title, url: link });
       } catch {
-        /* user dismissed */
+        /* dismissed */
       }
-    } else {
-      copy();
-    }
+    } else copy();
   }
 
   async function snapshot(mode: "share" | "save") {
@@ -69,12 +64,7 @@ export default function SharePanel() {
     try {
       const blob = await captureStage();
       const filename = `${(wardrobe!.title || "wardrobe").replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.png`;
-      if (mode === "share") {
-        const ok = await shareImage(blob, filename, wardrobe!.title);
-        if (!ok) downloadBlob(blob, filename);
-      } else {
-        downloadBlob(blob, filename);
-      }
+      if (mode === "save" || !(await shareImage(blob, filename, wardrobe!.title))) downloadBlob(blob, filename);
     } catch {
       setNote("couldn't make a screenshot — try again.");
     } finally {
@@ -82,187 +72,106 @@ export default function SharePanel() {
     }
   }
 
-  const field =
-    "w-full rounded-lg border border-rule bg-ground/40 px-3 py-2 text-xs outline-none";
-
   return (
-    <div className="fixed inset-0 z-[55]" onClick={() => setPanel(null)}>
-      <motion.aside
-        initial={{ x: 360 }}
-        animate={{ x: 0 }}
-        exit={{ x: 360 }}
-        transition={{ type: "spring", stiffness: 320, damping: 34 }}
-        onClick={(e) => e.stopPropagation()}
-        className="thin-scroll absolute right-0 top-0 h-full w-full max-w-[330px] overflow-y-auto border-l border-rule bg-panel p-5 shadow-[-12px_0_40px_var(--shadow)]"
-      >
-        <div className="flex items-center justify-between">
-          <h2 className="font-[family-name:var(--font-display)] text-lg lowercase">share</h2>
-          <button onClick={() => setPanel(null)} className="text-sm lowercase text-ink-soft">
-            close ×
-          </button>
-        </div>
+    <Dialog title="share" variant="sheet" onClose={close} labelledBy="share-title">
+      <SheetHeader id="share-title" title="share" onClose={close} />
+      <p className="mt-1 text-[11px] lowercase text-ink-soft">sharing is per wardrobe — this is {wardrobe.title}.</p>
 
-        {/* ---- share link ---- */}
-        <Section label="share link">
-          <label className="flex items-center justify-between gap-3">
-            <span className="text-xs lowercase text-ink-soft">
-              {shared
-                ? "anyone with the link can peek (read-only)."
-                : "off — your wardrobe is private."}
-            </span>
-            <button
-              role="switch"
-              aria-checked={shared}
-              disabled={busy}
-              onClick={() => toggle(!shared)}
-              className={
-                "relative h-6 w-11 shrink-0 rounded-full transition disabled:opacity-50 " +
-                (shared ? "bg-ink" : "bg-rule")
-              }
-            >
-              <span
-                className={
-                  "absolute top-0.5 h-5 w-5 rounded-full bg-panel shadow transition-all " +
-                  (shared ? "left-[1.375rem]" : "left-0.5")
-                }
-              />
-            </button>
-          </label>
-
-          {shared && (
-            <div className="mt-3 space-y-2">
-              <input readOnly value={link} onFocus={(e) => e.target.select()} className={field} />
-              <div className="flex gap-2">
-                <button
-                  onClick={copy}
-                  className="flex-1 rounded-full bg-ink px-3 py-2 text-xs lowercase text-panel transition hover:opacity-90"
-                >
-                  {copied ? "copied ✦" : "copy link"}
-                </button>
-                <button
-                  onClick={shareLink}
-                  className="flex-1 rounded-full border border-rule px-3 py-2 text-xs lowercase transition hover:bg-ink/5"
-                >
-                  share…
-                </button>
-              </div>
-            </div>
-          )}
-        </Section>
-
-        {/* ---- what viewers see ---- */}
+      <Group label="share link">
+        <Toggle
+          on={shared}
+          disabled={busy}
+          onChange={(v) =>
+            run(async () => {
+              await setShare(v);
+              if (v) track("wardrobe_shared");
+            }, "couldn't update sharing — try again.")
+          }
+          label={shared ? "anyone with the link can peek (read-only)." : "off — this wardrobe is private."}
+        />
         {shared && (
-          <Section label="show item details">
-            <Toggle
-              on={!!wardrobe.shareDetails}
-              onChange={(v) => setShareDetails(v)}
-              label={
-                wardrobe.shareDetails
-                  ? "viewers can tap items to see name, brand & price."
-                  : "off — viewers only see the picture."
-              }
+          <div className="mt-3 space-y-2">
+            <input
+              readOnly
+              aria-label="share link"
+              value={link}
+              onFocus={(e) => e.target.select()}
+              className="w-full rounded-lg border border-rule bg-ground/40 px-3 py-2 text-xs outline-none"
             />
-          </Section>
-        )}
-
-        {/* ---- which sections ---- */}
-        {shared && sections.length > 0 && (
-          <Section label="sections to include">
-            <div className="mb-2 flex gap-2">
-              <button
-                onClick={() => sections.forEach((s) => updateSection(s.id, { shared: true }))}
-                className="rounded-full border border-rule px-2.5 py-1 text-[11px] lowercase hover:bg-ink/5"
-              >
-                everything
+            <div className="flex gap-2">
+              <button onClick={copy} className="flex-1 rounded-full bg-ink px-3 py-2 text-xs lowercase text-panel hover:opacity-90">
+                {copied ? "copied ✦" : "copy link"}
               </button>
-              <button
-                onClick={() => sections.forEach((s) => updateSection(s.id, { shared: false }))}
-                className="rounded-full border border-rule px-2.5 py-1 text-[11px] lowercase hover:bg-ink/5"
-              >
-                none
+              <button onClick={shareLink} className="flex-1 rounded-full border border-rule px-3 py-2 text-xs lowercase hover:bg-ink/5">
+                share…
               </button>
             </div>
-            <div className="space-y-1.5">
-              {sections.map((s) => (
-                <Toggle
-                  key={s.id}
-                  on={s.shared !== false}
-                  onChange={(v) => updateSection(s.id, { shared: v })}
-                  label={`${s.name}${s.count ? ` · ${s.count}` : ""}`}
-                />
-              ))}
-            </div>
-            <p className="mt-2 text-[11px] lowercase text-ink-soft">
-              unsorted items are always visible while sharing is on.
-            </p>
-          </Section>
-        )}
-
-        {/* ---- screenshot ---- */}
-        <Section label="screenshot">
-          <p className="mb-2 text-xs lowercase text-ink-soft">
-            snap the current canvas as an image to share or save.
-          </p>
-          <div className="flex gap-2">
             <button
-              onClick={() => snapshot("share")}
-              disabled={shooting}
-              className="flex-1 rounded-full bg-ink px-3 py-2 text-xs lowercase text-panel transition hover:opacity-90 disabled:opacity-50"
+              disabled={busy}
+              onClick={() => run(rotateShare, "couldn't make a new link — try again.")}
+              className="text-[11px] lowercase text-ink-soft underline underline-offset-4 hover:text-ink disabled:opacity-40"
             >
-              {shooting ? "snapping…" : "share image"}
-            </button>
-            <button
-              onClick={() => snapshot("save")}
-              disabled={shooting}
-              className="flex-1 rounded-full border border-rule px-3 py-2 text-xs lowercase transition hover:bg-ink/5 disabled:opacity-50"
-            >
-              save .png
+              make a new link (the old one stops working)
             </button>
           </div>
-        </Section>
+        )}
+      </Group>
 
-        {note && <p className="mt-4 text-xs lowercase text-blush">{note}</p>}
-      </motion.aside>
-    </div>
-  );
-}
+      {shared && (
+        <Group label="show item details">
+          <Toggle
+            on={!!wardrobe.shareDetails}
+            onChange={(v) => setShareDetails(v)}
+            label={wardrobe.shareDetails ? "viewers can tap items to see name, brand & price." : "off — viewers only see the pictures."}
+          />
+        </Group>
+      )}
 
-function Section({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="mt-6">
-      <div className="mb-2 text-xs lowercase text-ink-soft">{label}</div>
-      {children}
-    </div>
-  );
-}
+      {shared && sections && sections.length > 0 && (
+        <Group label="sections to include">
+          <div className="mb-2 flex gap-2">
+            <button onClick={() => setSectionsShared(true)} className="rounded-full border border-rule px-2.5 py-1 text-[11px] lowercase hover:bg-ink/5">
+              everything
+            </button>
+            <button onClick={() => setSectionsShared(false)} className="rounded-full border border-rule px-2.5 py-1 text-[11px] lowercase hover:bg-ink/5">
+              none
+            </button>
+          </div>
+          <div className="space-y-1.5">
+            {sections.map((s) => (
+              <Toggle
+                key={s.id}
+                on={s.shared !== false}
+                onChange={(v) => updateSection(s.id, { shared: v })}
+                label={`${s.name}${s.count ? ` · ${s.count}` : ""}`}
+              />
+            ))}
+          </div>
+          <p className="mt-2 text-[11px] lowercase text-ink-soft">unsorted items are always visible while sharing is on.</p>
+        </Group>
+      )}
 
-function Toggle({
-  on,
-  onChange,
-  label,
-}: {
-  on: boolean;
-  onChange: (v: boolean) => void;
-  label: string;
-}) {
-  return (
-    <label className="flex items-center justify-between gap-3">
-      <span className="text-xs lowercase text-ink-soft">{label}</span>
-      <button
-        role="switch"
-        aria-checked={on}
-        onClick={() => onChange(!on)}
-        className={
-          "relative h-6 w-11 shrink-0 rounded-full transition " + (on ? "bg-ink" : "bg-rule")
-        }
-      >
-        <span
-          className={
-            "absolute top-0.5 h-5 w-5 rounded-full bg-panel shadow transition-all " +
-            (on ? "left-[1.375rem]" : "left-0.5")
-          }
-        />
-      </button>
-    </label>
+      <Group label="screenshot">
+        <p className="mb-2 text-xs lowercase text-ink-soft">snap the canvas as an image to share or save.</p>
+        <div className="flex gap-2">
+          <button
+            onClick={() => snapshot("share")}
+            disabled={shooting}
+            className="flex-1 rounded-full bg-ink px-3 py-2 text-xs lowercase text-panel hover:opacity-90 disabled:opacity-50"
+          >
+            {shooting ? "snapping…" : "share image"}
+          </button>
+          <button
+            onClick={() => snapshot("save")}
+            disabled={shooting}
+            className="flex-1 rounded-full border border-rule px-3 py-2 text-xs lowercase hover:bg-ink/5 disabled:opacity-50"
+          >
+            save .png
+          </button>
+        </div>
+      </Group>
+
+      {note && <p className="mt-4 text-xs lowercase text-blush" role="alert">{note}</p>}
+    </Dialog>
   );
 }

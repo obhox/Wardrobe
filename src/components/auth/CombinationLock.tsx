@@ -1,9 +1,10 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { startAuthentication } from "@simplewebauthn/browser";
 import { api } from "@/lib/api";
+import { track } from "@/lib/analytics";
 
 type Mode = "home" | "email" | "login" | "create" | "recover";
 
@@ -179,7 +180,7 @@ function EmailMagic({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: (
       <p className="text-[11px] lowercase text-ink-soft">
         new here? this makes your wardrobe. already have one on this email? it opens it.
       </p>
-      {err && <p className="text-xs text-blush lowercase">{err}</p>}
+      {err && <p className="text-xs text-blush lowercase" role="alert">{err}</p>}
       <BackRow setMode={setMode} />
     </motion.div>
   );
@@ -198,6 +199,7 @@ function Field(props: React.InputHTMLAttributes<HTMLInputElement>) {
 }
 
 function Login({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: () => void }) {
+  const [handle, setHandle] = useState("");
   const [phrase, setPhrase] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -206,7 +208,7 @@ function Login({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: () => 
     setBusy(true);
     setErr("");
     try {
-      await api.post("/api/auth/login", { phrase });
+      await api.post("/api/auth/login", { handle, phrase });
       onDone();
     } catch (e) {
       setErr((e as Error).message);
@@ -219,34 +221,54 @@ function Login({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: () => 
     setErr("");
     try {
       const options = await api.post("/api/auth/passkey/auth/options");
-      const asseResp = await startAuthentication({ optionsJSON: options });
-      await api.post("/api/auth/passkey/auth/verify", asseResp);
+      const assertion = await startAuthentication({ optionsJSON: options });
+      await api.post("/api/auth/passkey/auth/verify", assertion);
       onDone();
     } catch (e) {
-      setErr((e as Error).message || "passkey didn't work");
+      const msg = (e as Error).message || "";
+      setErr(/abort|cancel|not allowed/i.test(msg) ? "passkey cancelled" : msg || "passkey didn't work");
       setBusy(false);
     }
   }
 
   return (
-    <motion.div {...fade} className="mt-7 flex flex-col gap-3">
-      <label className="text-xs lowercase text-ink-soft">turn your combination</label>
+    <motion.form
+      {...fade}
+      className="mt-7 flex flex-col gap-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        submit();
+      }}
+    >
+      <label htmlFor="login-handle" className="text-xs lowercase text-ink-soft">your handle</label>
       <Field
+        id="login-handle"
         autoFocus
-        placeholder="linen · brass · moth · 7"
+        autoComplete="username"
+        autoCapitalize="none"
+        placeholder="moth"
+        value={handle}
+        onChange={(e) => setHandle(e.target.value)}
+      />
+      <label htmlFor="login-phrase" className="text-xs lowercase text-ink-soft">turn your combination</label>
+      <Field
+        id="login-phrase"
+        type="password"
+        autoComplete="current-password"
+        placeholder="linen · brass · moth · button · 47"
         value={phrase}
         onChange={(e) => setPhrase(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && submit()}
       />
-      {err && <p className="text-xs text-blush lowercase">{err}</p>}
+      {err && <p className="text-xs text-blush lowercase" role="alert">{err}</p>}
       <button
-        disabled={busy || phrase.trim().length < 3}
-        onClick={submit}
+        type="submit"
+        disabled={busy || handle.trim().length < 2 || phrase.trim().length < 3}
         className="rounded-xl bg-ink py-3 text-[15px] lowercase text-panel transition hover:opacity-90 disabled:opacity-40"
       >
         {busy ? "turning…" : "unlock ✦"}
       </button>
       <button
+        type="button"
         onClick={passkey}
         disabled={busy}
         className="rounded-xl border border-rule py-2.5 text-[13px] lowercase transition hover:bg-ink/5"
@@ -254,7 +276,7 @@ function Login({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: () => 
         use a passkey instead
       </button>
       <BackRow setMode={setMode} />
-    </motion.div>
+    </motion.form>
   );
 }
 
@@ -262,35 +284,35 @@ function Create({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: () =>
   const [combo, setCombo] = useState<{ phrase: string; handle: string } | null>(null);
   const [handle, setHandle] = useState("");
   const [handleTouched, setHandleTouched] = useState(false);
-  const [email, setEmail] = useState("");
+  const [saved, setSaved] = useState(false);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
-  async function roll() {
-    const c = await api.get("/api/auth/generate");
-    setCombo({ phrase: c.phrase, handle: c.handle });
-    // only seed the suggested handle until the user makes it their own
-    if (!handleTouched) setHandle(c.handle);
-  }
-  useEffect(() => {
-    // fetch an initial combination on mount; setState happens post-await
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    roll();
+  const roll = useCallback(async (keepHandle: boolean) => {
+    try {
+      const c = await api.get("/api/auth/generate");
+      setCombo({ phrase: c.phrase, handle: c.handle });
+      setSaved(false);
+      // only seed the suggested handle until the user makes it their own
+      if (!keepHandle) setHandle(`${c.handle}-${c.digit}`);
+      setErr("");
+    } catch {
+      setErr("couldn't reach wardrobe to make a combination — check your connection and reroll.");
+    }
   }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => roll(false), 0);
+    return () => clearTimeout(t);
+  }, [roll]);
 
   async function create() {
     if (!combo) return;
     setBusy(true);
     setErr("");
     try {
-      await api.post("/api/auth/register", {
-        phrase: combo.phrase,
-        handle,
-        recoveryEmail: email.trim() || undefined,
-      });
-      if (typeof window !== "undefined" && (window as any).falorb) {
-        (window as any).falorb.track("account_created");
-      }
+      await api.post("/api/auth/register", { phrase: combo.phrase, handle });
+      track("account_created", { method: "combination" });
       onDone();
     } catch (e) {
       setErr((e as Error).message);
@@ -300,26 +322,32 @@ function Create({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: () =>
 
   return (
     <motion.div {...fade} className="mt-7 flex flex-col gap-3">
-      <label className="text-xs lowercase text-ink-soft">your combination — reroll until it feels yours</label>
+      <span className="text-xs lowercase text-ink-soft">your combination — reroll until it feels yours</span>
       <div className="flex items-center gap-2">
-        <div className="flex-1 rounded-lg border border-rule bg-ground/40 px-3 py-3 font-[family-name:var(--font-display)] text-[15px]">
+        <div
+          aria-live="polite"
+          className="flex-1 rounded-lg border border-rule bg-ground/40 px-3 py-3 font-[family-name:var(--font-display)] text-[14px]"
+        >
           {combo?.phrase ?? "…"}
         </div>
         <button
-          onClick={roll}
+          onClick={() => roll(handleTouched)}
           className="rounded-lg border border-rule px-3 py-3 text-sm lowercase transition hover:bg-ink/5"
           aria-label="reroll"
         >
           ↻
         </button>
       </div>
-      <label className="mt-1 text-xs lowercase text-ink-soft">
-        pick your handle — your public name
+      <label htmlFor="create-handle" className="mt-1 text-xs lowercase text-ink-soft">
+        pick your handle — your public name (you sign in with it)
       </label>
       <div className="flex items-center gap-2">
-        <span className="text-ink-soft">✦</span>
+        <span className="text-ink-soft" aria-hidden>✦</span>
         <Field
-          placeholder="moth"
+          id="create-handle"
+          autoCapitalize="none"
+          autoComplete="username"
+          placeholder="moth-7"
           value={handle}
           onChange={(e) => {
             setHandleTouched(true);
@@ -328,26 +356,14 @@ function Create({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: () =>
         />
       </div>
 
-      <label className="mt-1 text-xs lowercase text-ink-soft">
-        email — your way back in (recommended)
+      <label className="mt-1 flex cursor-pointer items-start gap-2 text-[12px] lowercase text-ink-soft">
+        <input type="checkbox" checked={saved} onChange={(e) => setSaved(e.target.checked)} className="mt-0.5" />
+        <span>i&apos;ve saved my handle and combination somewhere safe. you can add an email or a passkey as a spare key from your account.</span>
       </label>
-      <Field
-        type="email"
-        inputMode="email"
-        autoComplete="email"
-        placeholder="you@example.com"
-        value={email}
-        onChange={(e) => setEmail(e.target.value.trim())}
-        className="lowercase"
-      />
-      <p className="-mt-1 text-[11px] lowercase text-ink-soft">
-        if you ever lose your combination, this is the only way we can let you
-        back in — we just email a reset code. nothing else.
-      </p>
 
-      {err && <p className="text-xs text-blush lowercase">{err}</p>}
+      {err && <p className="text-xs text-blush lowercase" role="alert">{err}</p>}
       <button
-        disabled={busy || !combo || handle.trim().length < 2}
+        disabled={busy || !combo || handle.trim().length < 2 || !saved}
         onClick={create}
         className="rounded-xl bg-ink py-3 text-[15px] lowercase text-panel transition hover:opacity-90 disabled:opacity-40"
       >
@@ -364,6 +380,14 @@ function Recover({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: () =
   const [emailSent, setEmailSent] = useState(false);
   const [newPhrase, setNewPhrase] = useState("");
   const [note, setNote] = useState("");
+
+  async function rollNew() {
+    try {
+      setNewPhrase((await api.get("/api/auth/generate")).phrase);
+    } catch {
+      setErr("couldn't make a combination — try again");
+    }
+  }
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -375,6 +399,7 @@ function Recover({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: () =
     try {
       await api.post("/api/auth/recover/request", { handle });
       setEmailSent(true);
+      if (!newPhrase) rollNew();
       setNote("if an email is on file, a reset code is on its way. it's good for 15 minutes.");
     } catch (e) {
       setErr((e as Error).message);
@@ -430,8 +455,15 @@ function Recover({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: () =
             />
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-xs lowercase text-ink-soft">set a new combination</span>
-            <Field placeholder="wool · sage · wren · 4" value={newPhrase} onChange={(e) => setNewPhrase(e.target.value)} />
+            <span className="text-xs lowercase text-ink-soft">your new combination — write it down</span>
+            <div className="flex items-center gap-2">
+              <div aria-live="polite" className="flex-1 rounded-lg border border-rule bg-ground/40 px-3 py-2.5 font-[family-name:var(--font-display)] text-[13px]">
+                {newPhrase || "…"}
+              </div>
+              <button onClick={rollNew} aria-label="reroll" className="rounded-lg border border-rule px-3 py-2.5 text-sm hover:bg-ink/5">
+                ↻
+              </button>
+            </div>
           </div>
           <button
             disabled={busy || code.length < 6 || newPhrase.trim().length < 3}
@@ -449,7 +481,7 @@ function Recover({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: () =
         trade for staying email-free.
       </p>
 
-      {err && <p className="text-xs text-blush lowercase">{err}</p>}
+      {err && <p className="text-xs text-blush lowercase" role="alert">{err}</p>}
       <BackRow setMode={setMode} />
     </motion.div>
   );

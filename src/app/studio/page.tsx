@@ -1,21 +1,14 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
-import { loadWardrobe } from "@/lib/wardrobe";
-import Studio from "./Studio";
+import { resolveWardrobeId } from "@/lib/wardrobe";
 
 export const dynamic = "force-dynamic";
 
-export default async function StudioPage() {
+// /studio → the wardrobe you last opened
+export default async function StudioIndex() {
   const user = await getCurrentUser();
   if (!user) redirect("/");
-
-  const payload = await loadWardrobe(user.id);
-  if (!payload) redirect("/");
-
-  return (
-    <Studio
-      initial={payload}
-      user={{ id: user.id, email: user.email }}
-    />
-  );
+  const id = await resolveWardrobeId(user.id, null, user.lastWardrobeId);
+  if (!id) redirect("/");
+  redirect(`/studio/${id}`);
 }

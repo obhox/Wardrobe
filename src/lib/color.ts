@@ -1,10 +1,14 @@
 // Client-side dominant-hue extraction for "arrange by color" (brief §16).
-// Samples the image on a tiny canvas and returns a 0..360 hue.
+// Samples the image on a tiny canvas and returns a 0..360 hue, or -1 when the
+// object is essentially colourless (greys, black, white) — those sort after
+// the rainbow instead of pretending to be red.
 
 import { proxiedSrc } from "./img";
 
+export const NO_HUE = -1;
+
 export async function extractHue(imageUrl: string): Promise<number> {
-  if (typeof window === "undefined") return 0;
+  if (typeof window === "undefined") return NO_HUE;
   return new Promise((resolve) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
@@ -15,7 +19,7 @@ export async function extractHue(imageUrl: string): Promise<number> {
         canvas.width = size;
         canvas.height = size;
         const ctx = canvas.getContext("2d");
-        if (!ctx) return resolve(0);
+        if (!ctx) return resolve(NO_HUE);
         ctx.drawImage(img, 0, 0, size, size);
         const { data } = ctx.getImageData(0, 0, size, size);
 
@@ -30,15 +34,16 @@ export async function extractHue(imageUrl: string): Promise<number> {
           if (sat < 0.12) continue; // skip near-grey pixels
           r += cr; g += cg; b += cb; n += 1;
         }
-        if (n === 0) return resolve(0);
+        // fewer than ~6% colourful pixels → treat as neutral
+        if (n < (size * size) * 0.06) return resolve(NO_HUE);
         resolve(rgbToHue(r / n, g / n, b / n));
       } catch {
-        resolve(0); // tainted canvas (CORS) — fall back gracefully
+        resolve(NO_HUE); // tainted canvas (CORS) — fall back gracefully
       }
     };
-    img.onerror = () => resolve(0);
+    img.onerror = () => resolve(NO_HUE);
     // never let a slow or hung image hold up saving the item
-    setTimeout(() => resolve(0), 4000);
+    setTimeout(() => resolve(NO_HUE), 4000);
     img.src = proxiedSrc(imageUrl); // same-origin, so the canvas isn't tainted
   });
 }
