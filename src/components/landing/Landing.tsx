@@ -164,10 +164,10 @@ export default function Landing() {
         <SectionLabel kicker="the core loop" title="four steps to a closet you enjoy opening." />
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { n: "01", icon: "🔗", title: "add an item", body: "paste a product link and the image, title & price are pulled in — or upload your own photo." },
-            { n: "02", icon: "✦", title: "it floats", body: "the cutout drops in as a background-removed sticker and drifts gently. drag it anywhere." },
-            { n: "03", icon: "🗂", title: "organize", body: "drop it into a section, switch arrange modes, sweep everything by color in one motion." },
-            { n: "04", icon: "🎨", title: "beautify", body: "pick a ground, lay down a pattern, add stickers and a title. make the room yours." },
+            { n: "01", icon: "⌁", title: "add an item", body: "paste a product link and the image, title & price are pulled in — or upload your own photo." },
+            { n: "02", icon: "✂", title: "it floats", body: "the background is cut away right in your browser — private, instant — and the cutout drifts gently. drag it anywhere." },
+            { n: "03", icon: "▤", title: "organize", body: "drop it into a section, switch arrange modes, sweep everything by color in one motion." },
+            { n: "04", icon: "✿", title: "beautify", body: "pick a ground, lay down a pattern, add stickers and a title. make the room yours." },
           ].map((s, i) => (
             <motion.div
               key={s.n}
@@ -213,6 +213,18 @@ export default function Landing() {
             tag="beautify"
             title="the room, decorated"
             body="curated grounds and custom hex, low-opacity patterns, draggable stickers and washi-tape corners, a title and tagline. pure scrapbook joy."
+          />
+          <Feature
+            accent="var(--terracotta)"
+            tag="wardrobes"
+            title="more than one room"
+            body="keep a closet, a wishlist and a gear shelf side by side — each with its own look, sections and share link. move things between them in a tap."
+          />
+          <Feature
+            accent="var(--honey)"
+            tag="stats · prices"
+            title="what it's worth, what it costs"
+            body="see your closet's value by section and brand, in your currency. want items with a link are checked for price drops, and you hear about it when they hit your target."
           />
         </div>
       </section>

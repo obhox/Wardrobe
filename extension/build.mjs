@@ -13,7 +13,7 @@ import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const VERSION = "1.0.0";
+const VERSION = "1.1.0";
 const PROD_SERVER = "https://wardrobe.obhox.com";
 const DEV_SERVER = "http://localhost:3000";
 

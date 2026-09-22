@@ -15,6 +15,8 @@ const state = {
   status: "owned",
   sizeTier: "medium",
   sections: [],
+  wardrobes: [],
+  wardrobeId: "", // which wardrobe to save into
   wantSection: "", // last-used / drafted section, applied once the list has it
   savedId: null,
 };
@@ -39,7 +41,20 @@ async function api(path, init = {}) {
   return data;
 }
 
-const proxied = (url) => `${SERVER}/api/img?url=${encodeURIComponent(url)}`;
+// The image proxy only serves signed links to the extension (its <img>
+// requests don't carry the session cookie), so ask the server to sign them.
+const signed = new Map();
+async function proxied(url) {
+  if (!signed.has(url)) {
+    signed.set(
+      url,
+      api("/api/img/sign", { method: "POST", body: JSON.stringify({ urls: [url] }) })
+        .then((r) => `${SERVER}${r.urls[url]}`)
+        .catch(() => `${SERVER}/api/img?url=${encodeURIComponent(url)}`),
+    );
+  }
+  return signed.get(url);
+}
 
 function openTab(url) {
   chrome.tabs.create({ url });
@@ -76,9 +91,9 @@ const signIn = () =>
 // Load a shop photo straight from the shop; if it hotlink-blocks us, go through
 // the wardrobe proxy; if that fails too, give up on the photo.
 function loadInto(img, url, onFail) {
-  img.onerror = () => {
+  img.onerror = async () => {
     img.onerror = onFail;
-    img.src = proxied(url);
+    img.src = await proxied(url);
   };
   img.src = url;
 }
@@ -135,14 +150,14 @@ function hueOf(url) {
           if (max === 0 || (max - min) / max < 0.12) continue;
           r += data[i]; g += data[i + 1]; b += data[i + 2]; n++;
         }
-        resolve(n ? rgbToHue(r / n, g / n, b / n) : 0);
+        resolve(n >= 35 ? rgbToHue(r / n, g / n, b / n) : -1); // -1 = colourless
       } catch {
-        resolve(0);
+        resolve(-1);
       }
     };
-    img.onerror = () => resolve(0);
-    setTimeout(() => resolve(0), 4000);
-    img.src = proxied(url);
+    img.onerror = () => resolve(-1);
+    setTimeout(() => resolve(-1), 4000);
+    proxied(url).then((src) => (img.src = src));
   });
   hues.set(url, p);
   return p;
@@ -278,7 +293,8 @@ function renderSections(selected = $("section").value || state.wantSection) {
 // sections inside the full /api/wardrobe payload
 async function fetchSections() {
   try {
-    return (await api("/api/sections")).sections ?? [];
+    const q = state.wardrobeId ? `?w=${encodeURIComponent(state.wardrobeId)}` : "";
+    return (await api(`/api/sections${q}`)).sections ?? [];
   } catch (err) {
     if (err.status === 401) throw err;
     return ((await api("/api/wardrobe")).sections ?? []).map(({ id, name, icon }) => ({ id, name, icon }));
@@ -298,7 +314,7 @@ async function createSection() {
   if (!name) return;
   $("section-create").disabled = true;
   try {
-    const s = await api("/api/sections", { method: "POST", body: JSON.stringify({ name }) });
+    const s = await api("/api/sections", { method: "POST", body: JSON.stringify({ name, wardrobeId: state.wardrobeId || undefined }) });
     state.sections.push({ id: s.id, name: s.name, icon: s.icon });
     chrome.storage.local.set({ [SECTIONS_KEY]: state.sections });
     renderSections(s.id);
@@ -393,8 +409,8 @@ async function save() {
     const item = await api("/api/items", {
       method: "POST",
       body: JSON.stringify({
+        wardrobeId: state.wardrobeId || undefined,
         imageUrl,
-        cutoutUrl: imageUrl,
         sourceUrl: state.sourceUrl || null,
         name,
         brand: $("brand").value.trim() || null,
@@ -456,7 +472,7 @@ $("undo").onclick = async () => {
   }
   $("undo").disabled = false;
 };
-$("view").onclick = () => openTab(`${SERVER}/studio`);
+$("view").onclick = () => openTab(`${SERVER}/studio${state.wardrobeId ? `/${state.wardrobeId}` : ""}`);
 $("open-studio").onclick = (e) => {
   e.preventDefault();
   openTab(`${SERVER}/studio`);
@@ -526,7 +542,10 @@ async function main() {
   const me = api("/api/auth/me");
   const page = (pending.link ? scrape(pending.link) : readTab(tab)).catch(() => null);
   state.sections = sections; // cached list shows instantly; refreshed below
-  const fresh = fetchSections().catch(() => null);
+  const fresh = loadWardrobes()
+    .catch(() => null)
+    .then(() => fetchSections())
+    .catch(() => null);
 
   try {
     const { user } = await me;
@@ -554,5 +573,31 @@ async function main() {
     renderSections();
   }
 }
+
+
+// ---- which wardrobe ---------------------------------------------------------
+
+async function loadWardrobes() {
+  const { wardrobes = [], lastWardrobeId } = await api("/api/wardrobes");
+  state.wardrobes = wardrobes;
+  const { lastWardrobe } = await chrome.storage.local.get("lastWardrobe");
+  const pick = [lastWardrobe, lastWardrobeId].find((id) => wardrobes.some((w) => w.id === id));
+  state.wardrobeId = pick ?? wardrobes[0]?.id ?? "";
+  const sel = $("wardrobe");
+  sel.replaceChildren(...wardrobes.map((w) => new Option(`${w.icon ?? "✦"} ${w.title}`, w.id)));
+  sel.value = state.wardrobeId;
+  $("wardrobe-row").hidden = wardrobes.length < 2;
+}
+
+$("wardrobe").addEventListener("change", async (e) => {
+  state.wardrobeId = e.target.value;
+  chrome.storage.local.set({ lastWardrobe: state.wardrobeId });
+  state.wantSection = "";
+  const list = await fetchSections().catch(() => null);
+  if (list) {
+    state.sections = list;
+    renderSections();
+  }
+});
 
 main();

@@ -24,10 +24,18 @@ export default function Privacy() {
         <H>what the website stores</H>
         <ul className="list-disc space-y-1 pl-5">
           <li>your account: a public handle, a hashed sign-in combination or your email, and passkeys if you add them.</li>
-          <li>your wardrobe: the items, photos, links, prices, notes, sections and decorations you add.</li>
-          <li>a sign-in cookie (<code>wardrobe_session</code>) so you stay signed in.</li>
+          <li>your wardrobes: the items, photos, links, prices, notes, sections and decorations you add. photos are stored as images in our storage bucket at unguessable addresses.</li>
+          <li>for want items with a link: the price we read from that page every few hours, so we can tell you when it drops. turn this off per item.</li>
+          <li>a sign-in cookie (<code>wardrobe_session</code>) so you stay signed in, and the device type of each signed-in session (so you can sign devices out).</li>
           <li>basic usage analytics (pages visited, and events like &quot;item added&quot;) to see what&apos;s working.</li>
         </ul>
+
+        <H>background removal</H>
+        <p>
+          cutting the background out of a photo happens in your browser. the photo isn&apos;t sent to
+          any third party for this — your browser downloads the cutout model once (from imgly&apos;s
+          public cdn) and runs it locally.
+        </p>
 
         <H>the browser extension</H>
         <p>the &quot;wardrobe — save to closet&quot; chrome extension only does something when you ask it to:</p>
@@ -60,8 +68,9 @@ export default function Privacy() {
 
         <H>deleting your data</H>
         <p>
-          delete any item from the studio and it&apos;s gone. removing the extension deletes its local
-          preferences. to delete your whole account, contact us from the email linked to your account.
+          delete any item from the studio and it&apos;s gone, photos included. removing the extension
+          deletes its local preferences. from <b>account</b> in the studio you can download everything
+          we hold as a file, or delete your whole account — every wardrobe, item and photo — for good.
         </p>
 
         <p className="mt-10">
