@@ -49,7 +49,8 @@ docker compose up --build     # Postgres + MinIO + app, migrations run on boot
 4. Deploy. The container runs `prisma migrate deploy` and only then starts the
    server; a failed migration stops the deploy instead of serving a broken schema.
    Health check: `/api/health`.
-5. Schedule price checks every ~6 hours:
+5. Schedule price checks (every ~6 hours is fine — each run only rechecks items
+   whose price is more than 30 days old, up to 40 at a time):
    `curl -fsS -X POST -H "authorization: Bearer $CRON_SECRET" https://<app>/api/cron/prices`
 
 ### Upgrading an existing database (first deploy of v0.3)

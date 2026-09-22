@@ -82,18 +82,23 @@ export async function checkItemPrice(item: Item): Promise<CheckOutcome> {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// Scheduled checks revisit an item only once this long has passed since it
+// was last checked (or added — the price was read when it was saved).
+const RECHECK_AFTER_MS = 30 * 24 * 60 * 60 * 1000;
+
 /** Check the stalest tracked items. One request at a time per shop. */
 export async function runPriceChecks({
   limit = 40,
-  staleAfterMs = 6 * 60 * 60 * 1000,
+  staleAfterMs = RECHECK_AFTER_MS,
   budgetMs = 50_000,
 }: { limit?: number; staleAfterMs?: number; budgetMs?: number } = {}) {
   const started = Date.now();
+  const cutoff = new Date(Date.now() - staleAfterMs);
   const items = await prisma.item.findMany({
     where: {
       status: "want",
       sourceUrl: { not: null },
-      OR: [{ lastCheckedAt: null }, { lastCheckedAt: { lt: new Date(Date.now() - staleAfterMs) } }],
+      OR: [{ lastCheckedAt: null, createdAt: { lt: cutoff } }, { lastCheckedAt: { lt: cutoff } }],
     },
     orderBy: [{ lastCheckedAt: { sort: "asc", nulls: "first" } }],
     take: limit,
