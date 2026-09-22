@@ -22,5 +22,10 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 
   const outcome = await checkItemPrice(item);
   const fresh = await prisma.item.findUniqueOrThrow({ where: { id } });
-  return json({ found: outcome.price != null, item: toItem(fresh) });
+  return json({
+    found: outcome.price != null,
+    unconvertible: !!outcome.unconvertible,
+    converted: outcome.converted ?? null,
+    item: toItem(fresh),
+  });
 }

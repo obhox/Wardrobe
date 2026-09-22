@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { itemFields, optionalImageRef, sourceUrl } from "@/lib/server/schemas";
 import { persistImage } from "@/lib/server/item-images";
 import { deleteUrls } from "@/lib/server/storage";
+import { switchCurrency } from "@/lib/server/money";
 import { error, json, notFound, readJson, unauthorized } from "@/lib/server/http";
 import { toItem } from "@/lib/wardrobe";
 
@@ -20,6 +21,8 @@ const patch = z
     sourceUrl,
     // move to another of the user's wardrobes
     wardrobeId: z.string().optional(),
+    // changing currency converts the amounts; relabel keeps the digits
+    relabelCurrency: z.boolean().optional(),
   })
   .partial();
 
@@ -47,7 +50,15 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     return error("invalid input", 400, { detail: parsed.error.flatten().fieldErrors });
   }
   const data: Record<string, unknown> = { ...parsed.data };
+  delete data.relabelCurrency;
   if (data.imageUrl === null) delete data.imageUrl; // an item always has a photo
+
+  // a currency change moves the amounts (and the price history) with it
+  let money = null as Awaited<ReturnType<typeof switchCurrency>> | null;
+  if (typeof parsed.data.currency === "string") {
+    money = await switchCurrency(item, parsed.data.currency, { relabel: parsed.data.relabelCurrency });
+    if (money.changed) Object.assign(data, money.data);
+  }
 
   let targetWardrobe = item.wardrobeId;
   if (parsed.data.wardrobeId && parsed.data.wardrobeId !== item.wardrobeId) {
@@ -95,8 +106,12 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   }
 
   const updated = await prisma.item.update({ where: { id }, data });
+  if (money?.applyHistory) await money.applyHistory();
   await deleteUrls(stale);
-  return json(toItem(updated));
+  return json({
+    ...toItem(updated),
+    ...(money?.changed ? { currencySwitch: { from: money.from, to: money.to, converted: money.converted } } : {}),
+  });
 }
 
 export async function DELETE(_req: NextRequest, { params }: Ctx) {

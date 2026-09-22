@@ -212,8 +212,11 @@ model Sticker {
 model PriceSnapshot {
   id        String   @id @default(cuid())
   itemId    String
-  price     Float
+  price     Float // in the item's tracking currency
   currency  String?
+  // what the page actually quoted, when it differed and we converted it
+  sourcePrice    Float?
+  sourceCurrency String?
   checkedAt DateTime @default(now())
   item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
 

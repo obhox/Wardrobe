@@ -136,9 +136,20 @@ scripts/                      one-off data migrations
   so nothing hotlinks. The `/api/img` proxy serves signed-in users, or signed
   URLs for guests and the extension. It only serves raster images, and every hop
   is checked against private addresses.
-- **Price tracking**: want items with a link are re-read by `/api/cron/prices`.
-  Snapshots feed the sparkline in the detail card. A drop or a target hit creates
-  a notification and at most one email digest a day.
+- **Price tracking**: want items with a link are re-read by `/api/cron/prices`,
+  at most once every 24 hours per item. Snapshots feed the sparkline in the
+  detail card. A drop or a target hit creates a notification and at most one
+  email digest a day.
+- **One currency per item.** Each item has a tracking currency (its own), and
+  the current price, lowest price, target and history all live in it. Shops
+  quote by country or session, so an observed price in another currency is
+  converted before anything is compared — a shop flipping $92 to ₦138,000 is
+  not a price rise, and a target is judged in the item's currency. If a price
+  can't be converted (no code on the page, or the rates feed is down) the check
+  records only the time rather than a number that means something else, and
+  each snapshot keeps what the page actually said. Changing an item's currency
+  in the studio asks whether to convert the amounts (moving the history with
+  them) or just relabel a currency that was detected wrongly.
 - **Stats** convert every price into your display currency (daily FX rates).
 - **Theming** is CSS variables switched by `data-ground`/`data-accent`; custom
   hex grounds derive readable ink, panel and shadow tokens (`lib/ground.ts`).

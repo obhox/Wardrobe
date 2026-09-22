@@ -34,6 +34,8 @@ export default function ItemDetail() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [draftFor, setDraftFor] = useState<string | null>(null);
   const [busy, setBusy] = useState<"" | "cut" | "photo" | "check">("");
+  // a currency change with a price on the item asks first: convert, or relabel?
+  const [pendingCurrency, setPendingCurrency] = useState<string | null>(null);
   const [history, setHistory] = useState<PricePoint[] | null>(null);
 
   if (item && draftFor !== item.id) {
@@ -105,11 +107,48 @@ export default function ItemDetail() {
     try {
       const r = await api.post(`/api/items/${item!.id}/check`);
       replaceItem(r.item);
-      toast(r.found ? `now ${formatMoney(r.item.price, r.item.currency)}` : "couldn't find a price on that page");
+      toast(
+        r.found
+          ? `now ${formatMoney(r.item.price, r.item.currency)}${
+              r.converted ? ` (page says ${formatMoney(r.converted.price, r.converted.currency)})` : ""
+            }`
+          : r.unconvertible
+            ? "that page quotes another currency we can't convert right now — try again later"
+            : "couldn't find a price on that page"
+      );
     } catch (e) {
       toast((e as Error).message, { tone: "error" });
     }
     setBusy("");
+  }
+
+  function changeCurrency(next: string) {
+    if (!next || next === item!.currency) return;
+    const hasAmounts = item!.price != null || item!.targetPrice != null;
+    // nothing to convert → just set it
+    if (!hasAmounts || !item!.currency) {
+      updateItem(item!.id, { currency: next || null });
+      return;
+    }
+    setPendingCurrency(next);
+  }
+
+  async function applyCurrency(relabel: boolean) {
+    const next = pendingCurrency;
+    setPendingCurrency(null);
+    if (!next) return;
+    try {
+      const saved = await api.patch(`/api/items/${item!.id}`, { currency: next, relabelCurrency: relabel });
+      replaceItem(saved);
+      const sw = saved.currencySwitch;
+      if (sw && !relabel && !sw.converted) {
+        toast("couldn't get today's rates — kept the numbers and just changed the label", { tone: "error" });
+      } else if (sw?.converted) {
+        toast(`converted to ${sw.to.toLowerCase()} at today's rate`);
+      }
+    } catch (e) {
+      toast((e as Error).message, { tone: "error" });
+    }
   }
 
   const money = (v?: number | null) => formatMoney(v, item.currency);
@@ -189,12 +228,32 @@ export default function ItemDetail() {
             <PriceField
               size="sm"
               currency={item.currency}
-              onCurrency={(v) => updateItem(item.id, { currency: v || null })}
+              onCurrency={(v) => changeCurrency(v)}
               amount={item.price != null ? String(item.price) : ""}
               onAmount={(v) => updateItem(item.id, { price: v ? Number(v) : null })}
               placeholder={item.status === "want" ? "current price" : "price paid"}
             />
           </div>
+
+          {pendingCurrency && (
+            <div className="rounded-lg border border-rule bg-ground/20 p-3 text-xs lowercase" role="group" aria-label="currency change">
+              <p>
+                is {money(item.price ?? item.targetPrice)} the price in {pendingCurrency.toLowerCase()}, or should it be
+                converted?
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button onClick={() => applyCurrency(false)} className="rounded-lg bg-ink px-3 py-1.5 text-xs lowercase text-panel">
+                  convert to {pendingCurrency.toLowerCase()}
+                </button>
+                <button onClick={() => applyCurrency(true)} className="rounded-lg border border-rule px-3 py-1.5 text-xs lowercase">
+                  it&apos;s already {pendingCurrency.toLowerCase()}
+                </button>
+                <button onClick={() => setPendingCurrency(null)} className="px-2 py-1.5 text-xs lowercase text-ink-soft underline underline-offset-4">
+                  cancel
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="flex flex-wrap items-center gap-2">
             {(["owned", "want"] as ItemStatus[]).map((st) => (

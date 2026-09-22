@@ -27,6 +27,41 @@ async function usdRates(): Promise<Rates | null> {
   }
 }
 
+// Currencies that don't use minor units — rounding to 2dp would look wrong.
+const ZERO_DECIMAL = new Set([
+  "JPY", "KRW", "VND", "CLP", "ISK", "UGX", "RWF", "XOF", "XAF", "KMF", "DJF", "GNF", "MGA", "PYG", "VUV",
+]);
+
+export function normalizeCurrency(code: string | null | undefined): string | null {
+  const c = code?.trim().toUpperCase();
+  return c && /^[A-Z]{3}$/.test(c) ? c : null;
+}
+
+export function roundMoney(amount: number, currency: string | null | undefined): number {
+  return ZERO_DECIMAL.has(normalizeCurrency(currency) ?? "")
+    ? Math.round(amount)
+    : Math.round(amount * 100) / 100;
+}
+
+/**
+ * Convert between two currencies. Strict: returns null when either code is
+ * missing or unknown, or the rates feed is unreachable — price tracking must
+ * never silently compare naira against dollars.
+ */
+export async function convertAmount(
+  amount: number,
+  from: string | null | undefined,
+  to: string | null | undefined
+): Promise<number | null> {
+  const src = normalizeCurrency(from);
+  const dst = normalizeCurrency(to);
+  if (!src || !dst) return null;
+  if (src === dst) return amount;
+  const rates = await usdRates();
+  if (!rates?.[src] || !rates[dst]) return null;
+  return roundMoney((amount / rates[src]) * rates[dst], dst);
+}
+
 export interface Converter {
   (amount: number, from: string | null | undefined): number | null;
 }
