@@ -5,8 +5,8 @@ import type { Item } from "@/lib/types";
 import { proxiedSrc } from "@/lib/img";
 import { formatMoney } from "@/lib/currency";
 
-// A cell in the scrolling "gallery" grid. Laid out by CSS flow — no dragging —
-// so the grid grows and the page scrolls when items pile up.
+// A cell on the board. Laid out by CSS flow — no dragging — so the grid grows
+// and the page scrolls when items pile up.
 export default function GalleryCard({ item, index, dimmed }: { item: Item; index: number; dimmed: boolean }) {
   const select = useStore((s) => s.select);
   const selected = useStore((s) => s.selectedId === item.id);

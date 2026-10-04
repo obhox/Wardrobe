@@ -14,13 +14,10 @@ interface Props {
   canvasW: number;
   canvasH: number;
   scale: number;
-  draggable: boolean;
-  longPress: boolean;
   dimmed: boolean;
   index: number;
 }
 
-const LONG_PRESS_MS = 320;
 const CLICK_SLOP = 5;
 const GLIDE = "left 0.75s cubic-bezier(.2,.8,.2,1), top 0.75s cubic-bezier(.2,.8,.2,1)";
 
@@ -41,8 +38,6 @@ function Cutout({
   canvasW,
   canvasH,
   scale,
-  draggable,
-  longPress,
   dimmed,
   index,
 }: Props) {
@@ -61,10 +56,8 @@ function Cutout({
   const dropping = useRef(false);
   // true for the commit that applies a drop, so left/top jump instead of glide
   const [settling, setSettling] = useState(false);
-  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pressStart = useRef<{ x: number; y: number } | null>(null);
   const [dragging, setDragging] = useState(false);
-  const [armed, setArmed] = useState(false); // long-press ready to move
 
   const size = Math.round(TIER_SIZE[item.sizeTier] * scale);
   const left = posX * canvasW;
@@ -82,35 +75,16 @@ function Cutout({
     return () => cancelAnimationFrame(raf);
   }, [left, top, x, y]);
 
-  function clearPress() {
-    if (pressTimer.current) clearTimeout(pressTimer.current);
-    pressTimer.current = null;
-  }
-
   function onPointerDown(e: React.PointerEvent) {
     moved.current = false;
     pressStart.current = { x: e.clientX, y: e.clientY };
-    if (!draggable || e.button !== 0) return;
-    if (e.pointerType === "mouse" || !longPress) {
-      controls.start(e);
-      return;
-    }
-    // touch on phones: hold to pick up, so a tap still opens the item
-    const native = e.nativeEvent;
-    clearPress();
-    pressTimer.current = setTimeout(() => {
-      setArmed(true);
-      navigator.vibrate?.(8);
-      controls.start(native);
-    }, LONG_PRESS_MS);
+    if (e.button === 0) controls.start(e);
   }
 
+  // a press that travels is a drag, not a tap that opens the item
   function onPointerMove(e: React.PointerEvent) {
     const s = pressStart.current;
-    if (s && Math.hypot(e.clientX - s.x, e.clientY - s.y) > CLICK_SLOP) {
-      moved.current = true;
-      if (!dragging) clearPress();
-    }
+    if (s && Math.hypot(e.clientX - s.x, e.clientY - s.y) > CLICK_SLOP) moved.current = true;
   }
 
   function nudge(dx: number, dy: number) {
@@ -122,7 +96,7 @@ function Cutout({
   return (
     <motion.div
       ref={wrapper}
-      drag={draggable}
+      drag
       dragControls={controls}
       dragListener={false}
       dragMomentum={false}
@@ -138,9 +112,9 @@ function Cutout({
         zIndex: selected ? 50 : dragging ? 45 : 10 + (index % 20),
         transition: dragging || settling || reduce ? "none" : GLIDE,
         opacity: dimmed ? 0.26 : 1,
-        touchAction: draggable && !longPress ? "none" : "manipulation",
+        touchAction: "none",
       }}
-      className={"absolute " + (draggable ? "cursor-grab active:cursor-grabbing" : "")}
+      className="absolute cursor-grab active:cursor-grabbing"
       onDragStart={() => {
         setDragging(true);
         moved.current = true;
@@ -148,7 +122,6 @@ function Cutout({
       onDrag={(_e, info) => setDropSection(sectionAt(info.point.x - window.scrollX, info.point.y - window.scrollY))}
       onDragEnd={(_e, info) => {
         setDragging(false);
-        setArmed(false);
         const target = sectionAt(info.point.x - window.scrollX, info.point.y - window.scrollY);
         setDropSection(null);
         if (target) {
@@ -166,23 +139,16 @@ function Cutout({
       }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
-      onPointerUp={clearPress}
-      onPointerCancel={() => {
-        clearPress();
-        setArmed(false);
-      }}
-      onContextMenu={(e) => longPress && e.preventDefault()}
     >
       <motion.button
         type="button"
         initial={reduce ? false : { opacity: 0, y: 26, scale: 0.92 }}
-        animate={{ opacity: 1, y: 0, scale: armed || dragging ? 1.06 : 1 }}
+        animate={{ opacity: 1, y: 0, scale: dragging ? 1.06 : 1 }}
         transition={{ delay: dragging ? 0 : Math.min(index * 0.05, 0.8), duration: 0.45, ease: "easeOut" }}
         onClick={() => {
           if (!moved.current) select(item.id);
         }}
         onKeyDown={(e) => {
-          if (!draggable) return;
           const step = e.shiftKey ? 0.05 : 0.01;
           const moves: Record<string, [number, number]> = {
             ArrowLeft: [-step, 0],
@@ -197,7 +163,7 @@ function Cutout({
           }
         }}
         className="group relative block h-full w-full select-none rounded-lg"
-        aria-label={`${item.name}${item.status === "want" ? ", want" : ""}${draggable ? " — arrow keys move it" : ""}`}
+        aria-label={`${item.name}${item.status === "want" ? ", want" : ""} — arrow keys move it`}
         style={{ WebkitTouchCallout: "none" }}
       >
         <span

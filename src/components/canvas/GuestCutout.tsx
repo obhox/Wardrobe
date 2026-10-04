@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { formatMoney } from "@/lib/currency";
+import type { ThemeId } from "@/lib/types";
 
 export interface GuestItem {
   id: string;
@@ -29,10 +30,13 @@ export interface GuestItem {
 export default function GuestCutout({
   item,
   details,
+  theme,
   gallery = false,
 }: {
   item: GuestItem;
   details: boolean;
+  // the info card is portalled out of the themed page, so it carries the theme
+  theme: ThemeId;
   gallery?: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -107,6 +111,7 @@ export default function GuestCutout({
           <div
             role="dialog"
             aria-label={item.name}
+            data-theme={theme}
             className="fixed inset-x-3 bottom-[max(3.5rem,calc(env(safe-area-inset-bottom)+3rem))] z-50 mx-auto max-w-sm rounded-2xl border border-rule bg-panel p-4 text-left shadow-[0_18px_44px_var(--shadow)]"
           >
             <div className="flex items-start justify-between gap-3">

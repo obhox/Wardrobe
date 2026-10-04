@@ -7,11 +7,9 @@ import type {
   WardrobePayload,
   Item,
   Section,
-  Sticker,
   LayoutMode,
   SortKey,
-  WardrobeTheme,
-  StickerKind,
+  ThemeId,
 } from "./types";
 
 type Filter = "all" | "owned" | "want";
@@ -64,15 +62,11 @@ interface State {
   rotateShare: () => Promise<void>;
   setShareDetails: (details: boolean) => Promise<void>;
   setSectionsShared: (shared: boolean) => Promise<void>;
-  setTheme: (patch: Partial<WardrobeTheme>) => Promise<void>;
+  setTheme: (theme: ThemeId) => Promise<void>;
   setTitle: (patch: { title?: string; tagline?: string | null; icon?: string | null }) => Promise<void>;
   setLayout: (mode: LayoutMode) => Promise<void>;
   setSort: (key: SortKey) => Promise<void>;
   tidyUp: () => void;
-
-  addSticker: (kind: StickerKind) => Promise<void>;
-  updateSticker: (id: string, patch: Partial<Sticker>) => void;
-  deleteSticker: (id: string) => void;
 
   flush: () => Promise<void>;
 }
@@ -82,7 +76,6 @@ const UNDO_MS = 5000;
 // ---- module-level bookkeeping (not render state) ----
 let positionTimer: ReturnType<typeof setTimeout> | null = null;
 const dirtyPositions = new Set<string>();
-const stickerTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const pendingDeletes = new Map<string, { url: string; timer: ReturnType<typeof setTimeout> }>();
 let toastSeq = 0;
 
@@ -404,10 +397,10 @@ export const useStore = create<State>((set, get) => {
       );
     },
 
-    setTheme: (patch) =>
+    setTheme: (theme) =>
       optimistic(
-        (p) => ({ ...p, wardrobe: { ...p.wardrobe, theme: { ...p.wardrobe.theme, ...patch } } }),
-        () => api.patch(`/api/wardrobes/${wid()}`, patch),
+        (p) => ({ ...p, wardrobe: { ...p.wardrobe, theme } }),
+        () => api.patch(`/api/wardrobes/${wid()}`, { theme }),
         "couldn't save the look"
       ),
 
@@ -426,8 +419,8 @@ export const useStore = create<State>((set, get) => {
         "couldn't save the title"
       ),
 
-    // Arranged layouts are computed at render time (see Canvas), so switching
-    // modes never overwrites the hand-made collage stored in posX/posY.
+    // The board flows items at render time (see Canvas), so switching to it
+    // never overwrites the hand-made collage stored in posX/posY.
     setLayout: (layoutMode) =>
       optimistic(
         (p) => ({ ...p, wardrobe: { ...p.wardrobe, layoutMode } }),
@@ -478,61 +471,6 @@ export const useStore = create<State>((set, get) => {
           schedulePositions(0);
         },
       });
-    },
-
-    // ---------------- stickers ----------------
-
-    addSticker: async (kind) => {
-      try {
-        const created: Sticker = await api.post("/api/stickers", {
-          kind,
-          posX: 0.3 + Math.random() * 0.4,
-          posY: 0.3 + Math.random() * 0.4,
-          rotation: Math.round((Math.random() - 0.5) * 30),
-          wardrobeId: wid(),
-        });
-        const p = get().payload;
-        if (p) set({ payload: { ...p, stickers: [...p.stickers, created] } });
-      } catch (e) {
-        get().toast(errMessage(e, "couldn't add that sticker"), { tone: "error" });
-      }
-    },
-
-    updateSticker: (id, patch) => {
-      const p = get().payload;
-      if (!p) return;
-      set({ payload: { ...p, stickers: p.stickers.map((s) => (s.id === id ? { ...s, ...patch } : s)) } });
-      const prev = stickerTimers.get(id);
-      if (prev) clearTimeout(prev);
-      stickerTimers.set(
-        id,
-        setTimeout(() => {
-          stickerTimers.delete(id);
-          const st = get().payload?.stickers.find((x) => x.id === id);
-          if (!st) return;
-          const { posX, posY, rotation, scale } = st;
-          api
-            .patch(`/api/stickers/${id}`, { posX, posY, rotation, scale })
-            .catch(() => get().toast("couldn't save that sticker", { tone: "error" }));
-        }, 500)
-      );
-    },
-
-    deleteSticker: (id) => {
-      const p = get().payload;
-      const sticker = p?.stickers.find((s) => s.id === id);
-      if (!p || !sticker) return;
-      set({ payload: { ...p, stickers: p.stickers.filter((s) => s.id !== id) } });
-      deferDelete(
-        `sticker:${id}`,
-        `/api/stickers/${id}`,
-        () => {
-          const cur = get().payload;
-          if (cur && !cur.stickers.some((s) => s.id === id))
-            set({ payload: { ...cur, stickers: [...cur.stickers, sticker] } });
-        },
-        "removed sticker"
-      );
     },
 
     // Push pending saves/deletes right away (before navigating or unload).

@@ -1,16 +1,13 @@
 import "server-only";
 import { prisma } from "@/lib/db";
 import { publicBase } from "@/lib/server/storage";
+import { toLayoutMode } from "@/lib/layout";
+import { toThemeId } from "@/lib/theme";
 import type {
   WardrobePayload,
   WardrobeSummary,
   Item,
   Section,
-  Sticker,
-  Ground,
-  Pattern,
-  Accent,
-  LayoutMode,
   SortKey,
   SizeTier,
   ItemStatus,
@@ -106,7 +103,6 @@ export async function loadWardrobe(
     include: {
       sections: { orderBy: { order: "asc" } },
       items: { orderBy: { createdAt: "asc" } },
-      stickers: true,
       owner: { select: { handle: true } },
     },
   });
@@ -127,27 +123,14 @@ export async function loadWardrobe(
     shared: s.shared,
   }));
 
-  const stickers: Sticker[] = wardrobe.stickers.map((s) => ({
-    id: s.id,
-    kind: s.kind as Sticker["kind"],
-    posX: s.posX,
-    posY: s.posY,
-    rotation: s.rotation,
-    scale: s.scale,
-  }));
-
   return {
     wardrobe: {
       id: wardrobe.id,
       title: wardrobe.title,
       tagline: wardrobe.tagline,
       icon: wardrobe.icon,
-      theme: {
-        ground: wardrobe.ground as Ground,
-        pattern: wardrobe.pattern as Pattern,
-        accent: wardrobe.accent as Accent,
-      },
-      layoutMode: wardrobe.layoutMode as LayoutMode,
+      theme: toThemeId(wardrobe.theme),
+      layoutMode: toLayoutMode(wardrobe.layoutMode),
       sortKey: wardrobe.sortKey as SortKey,
       handle: wardrobe.owner.handle,
       visibility: wardrobe.visibility,
@@ -156,7 +139,6 @@ export async function loadWardrobe(
     },
     sections,
     items: wardrobe.items.map(toItem),
-    stickers,
     wardrobes: await listWardrobes(userId),
     storageBase: publicBase() || null,
   };
@@ -185,13 +167,13 @@ export const TEMPLATES: Record<string, { title: string; icon: string; tagline: s
   blank: { title: "new wardrobe", icon: "○", tagline: "", sections: [] },
 };
 
-export function wardrobeCreateData(template: keyof typeof TEMPLATES, opts: { title?: string; ground?: string; order?: number } = {}) {
+export function wardrobeCreateData(template: keyof typeof TEMPLATES, opts: { title?: string; theme?: string; order?: number } = {}) {
   const t = TEMPLATES[template] ?? TEMPLATES.blank;
   return {
     title: opts.title?.trim() || t.title,
     tagline: t.tagline || null,
     icon: t.icon,
-    ground: opts.ground ?? "daylight",
+    theme: toThemeId(opts.theme),
     order: opts.order ?? 0,
     sections: {
       create: t.sections.map(([name, color], order) => ({ name, color, icon: "✦", order })),

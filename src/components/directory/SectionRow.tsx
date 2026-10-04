@@ -1,8 +1,8 @@
 "use client";
 import { useState } from "react";
 import { useStore } from "@/lib/store";
-import { ACCENTS, ACCENT_HEX } from "@/lib/theme";
-import type { Section, Accent, Item } from "@/lib/types";
+import { SECTION_COLORS, SECTION_COLOR_HEX } from "@/lib/theme";
+import type { Section, SectionColor, Item } from "@/lib/types";
 
 export const SECTION_ICONS = ["✦", "○", "◇", "△", "□", "♡", "✿", "☂", "⚙", "♪", "☀", "✂"];
 
@@ -35,7 +35,7 @@ export default function SectionRow({
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(section.name);
 
-  const dot = section.color ? ACCENT_HEX[section.color as Accent] ?? section.color : "var(--ink-soft)";
+  const dot = section.color ? SECTION_COLOR_HEX[section.color as SectionColor] ?? section.color : "var(--ink-soft)";
   const listId = `section-items-${section.id}`;
 
   function commitName() {
@@ -126,7 +126,7 @@ export default function SectionRow({
             ))}
           </div>
           <div className="flex flex-wrap gap-1.5" role="group" aria-label="colour">
-            {ACCENTS.map((a) => (
+            {SECTION_COLORS.map((a) => (
               <button
                 key={a.id}
                 aria-pressed={section.color === a.id}

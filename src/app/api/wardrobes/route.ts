@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       ownerId: user.id,
       ...wardrobeCreateData(parsed.data.template as keyof typeof TEMPLATES, {
         title: parsed.data.title,
-        ground: user.defaultTheme,
+        theme: user.defaultTheme,
         order: (existing._max.order ?? 0) + 1,
       }),
     },

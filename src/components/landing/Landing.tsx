@@ -168,7 +168,7 @@ export default function Landing() {
             { n: "01", icon: "⌁", title: "add an item", body: "paste a product link and the image, title & price are pulled in — or upload your own photo." },
             { n: "02", icon: "✂", title: "it floats", body: "the background is cut away right in your browser — private, instant — and the cutout drifts gently. drag it anywhere." },
             { n: "03", icon: "▤", title: "organize", body: "drop it into a section, switch arrange modes, sweep everything by color in one motion." },
-            { n: "04", icon: "✿", title: "beautify", body: "pick a ground, lay down a pattern, add stickers and a title. make the room yours." },
+            { n: "04", icon: "✿", title: "beautify", body: "pick a theme, give it a title and a tagline. make the room yours." },
           ].map((s, i) => (
             <motion.div
               key={s.n}
@@ -207,13 +207,13 @@ export default function Landing() {
             accent="var(--cobalt)"
             tag="arrange"
             title="layout × sort"
-            body="free collage, tidy grid, shelves, or columns — crossed with sort by recent, section, status, a–z, or a rainbow hue-sweep that glides every item into place."
+            body="a free collage you place by hand, or a board that scrolls — sorted by recent, section, status, a–z, or a rainbow hue-sweep."
           />
           <Feature
             accent="var(--brass)"
             tag="beautify"
             title="the room, decorated"
-            body="curated grounds and custom hex, low-opacity patterns, draggable stickers and washi-tape corners, a title and tagline. pure scrapbook joy."
+            body="curated themes that set the ground, ink and accent together, plus a title, a tagline and an icon for every wardrobe."
           />
           <Feature
             accent="var(--terracotta)"

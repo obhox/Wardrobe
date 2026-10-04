@@ -3,41 +3,21 @@
 
 export type ItemStatus = "owned" | "want";
 export type SourceType = "manual" | "scraped";
-export type LayoutMode = "free" | "grid" | "shelves" | "columns" | "gallery";
+// "free" is the hand-placed collage, "grid" the scrolling board
+export type LayoutMode = "free" | "grid";
 export type SortKey = "recent" | "color" | "section" | "status" | "az";
 export type SizeTier = "hero" | "large" | "medium" | "small";
 
-export type PresetGround =
-  | "daylight"
-  | "bone"
-  | "sage"
-  | "butter"
-  | "bubblegum"
-  | "slate";
+// a wardrobe's look: ground, ink, shadow and accent chosen together
+export type ThemeId = "paper" | "bone" | "sage" | "butter" | "rose" | "mist" | "ink";
 
-// a preset id, or a custom "#rrggbb" ground (ink/shadow derived from it)
-export type Ground = PresetGround | `#${string}`;
-
-export type Pattern = "none" | "grid" | "dots" | "polka" | "gingham";
-
-export type Accent =
+export type SectionColor =
   | "blush"
   | "olive"
   | "honey"
   | "brass"
   | "cobalt"
   | "terracotta";
-
-export type StickerKind =
-  | "star"
-  | "cat"
-  | "scribble"
-  | "washi"
-  | "shrug"
-  | "corner"
-  | "heart"
-  | "flower"
-  | "sparkle";
 
 export interface Section {
   id: string;
@@ -78,27 +58,12 @@ export interface Item {
   createdAt: string;
 }
 
-export interface Sticker {
-  id: string;
-  kind: StickerKind;
-  posX: number;
-  posY: number;
-  rotation: number;
-  scale: number;
-}
-
-export interface WardrobeTheme {
-  ground: Ground;
-  pattern: Pattern;
-  accent: Accent;
-}
-
 export interface Wardrobe {
   id: string;
   title: string;
   tagline?: string | null;
   icon?: string | null;
-  theme: WardrobeTheme;
+  theme: ThemeId;
   layoutMode: LayoutMode;
   sortKey: SortKey;
   handle: string;
@@ -119,7 +84,6 @@ export interface WardrobePayload {
   wardrobe: Wardrobe;
   sections: Section[];
   items: Item[];
-  stickers: Sticker[];
   wardrobes: WardrobeSummary[];
   // public base URL of the image bucket (images there skip the proxy)
   storageBase?: string | null;

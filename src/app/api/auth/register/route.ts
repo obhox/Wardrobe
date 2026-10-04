@@ -10,7 +10,6 @@ import {
 import { hashSecret, lookupHash } from "@/lib/auth/crypto";
 import { createSession } from "@/lib/auth/session";
 import { hit, LIMITS } from "@/lib/auth/rate-limit";
-import { groundSchema } from "@/lib/server/schemas";
 import { clientIp, error, isUniqueViolation, json, readJson, tooMany } from "@/lib/server/http";
 import { wardrobeCreateData } from "@/lib/wardrobe";
 
@@ -23,13 +22,12 @@ const schema = z.object({
   phrase: z.string().min(3).max(200),
   handle: z.string().min(2).max(30),
   displayName: z.string().max(40).optional(),
-  defaultTheme: groundSchema.default("daylight"),
 });
 
 export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(await readJson(req));
   if (!parsed.success) return error("invalid input", 400);
-  const { phrase, displayName, defaultTheme } = parsed.data;
+  const { phrase, displayName } = parsed.data;
 
   const ipRate = await hit(`register:ip:${clientIp(req)}`, { limit: 10, windowMs: 60 * 60 * 1000 });
   if (!ipRate.allowed) return tooMany(ipRate.retryAfterMs);
@@ -51,12 +49,11 @@ export async function POST(req: NextRequest) {
       data: {
         handle,
         displayName,
-        defaultTheme,
         combinationHash: await hashSecret(normalized),
         // kept for the unique index only; sign-in looks accounts up by handle
         lookupHash: lookupHash(`${handle}:${normalized}`),
         wardrobes: {
-          create: wardrobeCreateData("closet", { title: `${handle}'s wardrobe`, ground: defaultTheme }),
+          create: wardrobeCreateData("closet", { title: `${handle}'s wardrobe` }),
         },
       },
     });

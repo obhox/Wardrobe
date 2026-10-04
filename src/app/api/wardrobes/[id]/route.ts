@@ -4,13 +4,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { loadWardrobe } from "@/lib/wardrobe";
 import { deleteUrls } from "@/lib/server/storage";
-import {
-  accentSchema,
-  groundSchema,
-  layoutSchema,
-  patternSchema,
-  sortSchema,
-} from "@/lib/server/schemas";
+import { layoutSchema, sortSchema, themeSchema } from "@/lib/server/schemas";
 import { error, json, notFound, readJson, unauthorized } from "@/lib/server/http";
 
 export const dynamic = "force-dynamic";
@@ -34,9 +28,7 @@ const patch = z.object({
   title: z.string().trim().min(1).max(60).optional(),
   tagline: z.string().max(120).nullable().optional(),
   icon: z.string().max(4).nullable().optional(),
-  ground: groundSchema.optional(),
-  pattern: patternSchema.optional(),
-  accent: accentSchema.optional(),
+  theme: themeSchema.optional(),
   layoutMode: layoutSchema.optional(),
   sortKey: sortSchema.optional(),
 });

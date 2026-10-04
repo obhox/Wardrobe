@@ -18,7 +18,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" data-ground="daylight" className="h-full">
+    <html lang="en" className="h-full">
       <head>
         {/* Fonts loaded at runtime (not at build) so offline builds never fail. */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />

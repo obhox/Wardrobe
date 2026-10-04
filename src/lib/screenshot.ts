@@ -3,7 +3,7 @@ import { toPng } from "html-to-image";
 
 export const STAGE_ID = "wardrobe-stage";
 
-// Capture the wardrobe canvas (ground + cutouts + stickers) as a PNG blob.
+// Capture the wardrobe canvas (ground + cutouts) as a PNG blob.
 // Nodes flagged with data-noshot (owner controls, scrims) are skipped so the
 // shot reads like the read-only guest view. Item images are served same-origin
 // via /api/img, so the rendered canvas isn't tainted.

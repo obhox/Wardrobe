@@ -35,7 +35,7 @@ async function main() {
         parallelism: 1,
       }),
       lookupHash: lookupHash(`${DEMO_HANDLE}:${normalize(DEMO_COMBINATION)}`),
-      defaultTheme: "daylight",
+      defaultTheme: "mist",
       recoveryEmail: "demo@wardrobe.local",
     },
   });
@@ -47,9 +47,7 @@ async function main() {
       tagline: "everything, arranged just so.",
       icon: "✦",
       order: 0,
-      ground: "daylight",
-      pattern: "none",
-      accent: "cobalt",
+      theme: "mist",
     },
   });
 
@@ -251,10 +249,8 @@ async function main() {
       tagline: "things i'm keeping an eye on.",
       icon: "♡",
       order: 1,
-      ground: "bubblegum",
-      pattern: "polka",
-      accent: "blush",
-      layoutMode: "gallery",
+      theme: "rose",
+      layoutMode: "grid",
       sections: { create: [{ name: "soon", color: "blush", icon: "✦", order: 0 }] },
     },
   });

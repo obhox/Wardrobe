@@ -6,7 +6,7 @@
  * ------------------------------------------------------------------ */
 
 :root {
-  /* default ground = Daylight (periwinkle) */
+  /* pages without a wardrobe (landing, sign-in) sit on the periwinkle ground */
   --ground: #a9c4f5;
   --ground-haze: #bcd2f8;
   --ground-dusk: #9bb8ef;
@@ -18,7 +18,7 @@
   --shadow: rgba(36, 54, 96, 0.28);
   --shadow-strong: rgba(36, 54, 96, 0.4);
 
-  /* object accent set — never large fields */
+  /* object colours: section dots and theme accents */
   --blush: #f47d7d;
   --olive: #6f8d5c;
   --honey: #f2c87d;
@@ -26,21 +26,32 @@
   --cobalt: #5a82b6;
   --terracotta: #b9633d;
 
+  /* pins, chips, highlights — never large fields (brief §13) */
+  --accent: var(--cobalt);
+  --accent-ink: #ffffff;
+
   --font-display: "Martian Mono", "DM Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   --font-mono: "Spline Sans Mono", "DM Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-/* selectable grounds — each ships a tuned ink + shadow (brief §13) */
-[data-ground="daylight"] {
-  --ground: #a9c4f5;
-  --ground-haze: #bcd2f8;
-  --ground-dusk: #9bb8ef;
-  --ink: #14161b;
-  --ink-soft: #3a4150;
-  --shadow: rgba(36, 54, 96, 0.28);
-  --shadow-strong: rgba(36, 54, 96, 0.4);
+/* themes — a wardrobe picks one; each sets the ground with a tuned ink,
+   shadow and accent (brief §13). Set with data-theme where a wardrobe shows. */
+[data-theme] {
+  color: var(--ink);
 }
-[data-ground="bone"] {
+[data-theme="paper"] {
+  --ground: #faf9f6;
+  --ground-haze: #ffffff;
+  --ground-dusk: #f0ede6;
+  --ink: #1a1a18;
+  --ink-soft: #55534d;
+  --panel: #ffffff;
+  --shadow: rgba(60, 54, 40, 0.18);
+  --shadow-strong: rgba(60, 54, 40, 0.3);
+  --accent: #1a1a18;
+  --accent-ink: #ffffff;
+}
+[data-theme="bone"] {
   --ground: #f3efe6;
   --ground-haze: #faf7f0;
   --ground-dusk: #e7e0d2;
@@ -48,8 +59,10 @@
   --ink-soft: #4a443a;
   --shadow: rgba(80, 70, 50, 0.22);
   --shadow-strong: rgba(80, 70, 50, 0.34);
+  --accent: var(--brass);
+  --accent-ink: #1d1606;
 }
-[data-ground="sage"] {
+[data-theme="sage"] {
   --ground: #d7e0cc;
   --ground-haze: #e6ecdd;
   --ground-dusk: #c6d2b8;
@@ -57,8 +70,10 @@
   --ink-soft: #42503f;
   --shadow: rgba(58, 78, 50, 0.22);
   --shadow-strong: rgba(58, 78, 50, 0.34);
+  --accent: var(--olive);
+  --accent-ink: #ffffff;
 }
-[data-ground="butter"] {
+[data-theme="butter"] {
   --ground: #f6e6b8;
   --ground-haze: #fbf1cf;
   --ground-dusk: #efd99c;
@@ -66,8 +81,10 @@
   --ink-soft: #514a34;
   --shadow: rgba(120, 96, 30, 0.22);
   --shadow-strong: rgba(120, 96, 30, 0.34);
+  --accent: var(--terracotta);
+  --accent-ink: #ffffff;
 }
-[data-ground="bubblegum"] {
+[data-theme="rose"] {
   --ground: #f4d3de;
   --ground-haze: #fbe4ec;
   --ground-dusk: #eec0d0;
@@ -75,8 +92,21 @@
   --ink-soft: #533a45;
   --shadow: rgba(120, 50, 80, 0.2);
   --shadow-strong: rgba(120, 50, 80, 0.32);
+  --accent: var(--blush);
+  --accent-ink: #ffffff;
 }
-[data-ground="slate"] {
+[data-theme="mist"] {
+  --ground: #a9c4f5;
+  --ground-haze: #bcd2f8;
+  --ground-dusk: #9bb8ef;
+  --ink: #14161b;
+  --ink-soft: #3a4150;
+  --shadow: rgba(36, 54, 96, 0.28);
+  --shadow-strong: rgba(36, 54, 96, 0.4);
+  --accent: var(--cobalt);
+  --accent-ink: #ffffff;
+}
+[data-theme="ink"] {
   --ground: #1f2330;
   --ground-haze: #2a3042;
   --ground-dusk: #161a24;
@@ -86,33 +116,8 @@
   --panel: #2a3042;
   --shadow: rgba(0, 0, 0, 0.45);
   --shadow-strong: rgba(0, 0, 0, 0.6);
-}
-
-/* accent (brief §13: pins, chips, highlights — never large fields) */
-:root,
-[data-accent="cobalt"] {
-  --accent: var(--cobalt);
-  --accent-ink: #ffffff;
-}
-[data-accent="blush"] {
-  --accent: var(--blush);
-  --accent-ink: #ffffff;
-}
-[data-accent="olive"] {
-  --accent: var(--olive);
-  --accent-ink: #ffffff;
-}
-[data-accent="honey"] {
   --accent: var(--honey);
   --accent-ink: #20190a;
-}
-[data-accent="brass"] {
-  --accent: var(--brass);
-  --accent-ink: #1d1606;
-}
-[data-accent="terracotta"] {
-  --accent: var(--terracotta);
-  --accent-ink: #ffffff;
 }
 
 /* expose tokens to Tailwind utilities (bg-ground, text-ink, …) */
@@ -162,32 +167,6 @@ body {
     radial-gradient(120% 90% at 50% 18%, var(--ground-haze), transparent 60%),
     radial-gradient(140% 120% at 50% 120%, var(--ground-dusk), transparent 55%),
     var(--ground);
-}
-
-/* pattern overlays (brief §17) — low opacity */
-.pattern-grid {
-  background-image:
-    linear-gradient(var(--rule) 1px, transparent 1px),
-    linear-gradient(90deg, var(--rule) 1px, transparent 1px);
-  background-size: 28px 28px;
-  opacity: 0.12;
-}
-.pattern-dots {
-  background-image: radial-gradient(var(--rule) 1.3px, transparent 1.4px);
-  background-size: 22px 22px;
-  opacity: 0.18;
-}
-.pattern-polka {
-  background-image: radial-gradient(var(--ink-soft) 3px, transparent 3.5px);
-  background-size: 46px 46px;
-  opacity: 0.1;
-}
-.pattern-gingham {
-  background-image:
-    linear-gradient(var(--rule) 2px, transparent 2px),
-    linear-gradient(90deg, var(--rule) 2px, transparent 2px);
-  background-size: 18px 18px;
-  opacity: 0.14;
 }
 
 /* clay-like cutout shadow (brief §15) */
@@ -253,18 +232,6 @@ body {
   to {
     background-position: 0 140%;
   }
-}
-
-/* washi tape sticker */
-.washi {
-  background: repeating-linear-gradient(
-    -45deg,
-    color-mix(in srgb, var(--accent) 55%, transparent) 0 6px,
-    color-mix(in srgb, var(--panel) 70%, transparent) 6px 12px
-  );
-  opacity: 0.85;
-  border-radius: 2px;
-  mask-image: linear-gradient(90deg, transparent 0, #000 4px, #000 calc(100% - 4px), transparent 100%);
 }
 
 .no-scrollbar {

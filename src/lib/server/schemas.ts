@@ -1,22 +1,16 @@
 import "server-only";
 import { z } from "zod";
 import { clip, looseUrl } from "@/lib/links";
+import { toLayoutMode } from "@/lib/layout";
 import { storageConfigured } from "./storage";
 
 // Shared request validation. Enums mirror src/lib/types.ts.
 
-export const groundSchema = z.union([
-  z.enum(["daylight", "bone", "sage", "butter", "bubblegum", "slate"]),
-  z.string().regex(/^#[0-9a-f]{6}$/i).transform((s) => s.toLowerCase()),
-]);
-export const patternSchema = z.enum(["none", "grid", "dots", "polka", "gingham"]);
-export const accentSchema = z.enum(["blush", "olive", "honey", "brass", "cobalt", "terracotta"]);
-export const layoutSchema = z.enum(["free", "grid", "shelves", "columns", "gallery"]);
+export const themeSchema = z.enum(["paper", "bone", "sage", "butter", "rose", "mist", "ink"]);
+// removed layouts are still accepted (a tab left open) and saved as the board
+export const layoutSchema = z.enum(["free", "grid", "shelves", "columns", "gallery"]).transform(toLayoutMode);
 export const sortSchema = z.enum(["recent", "color", "section", "status", "az"]);
 export const sizeTierSchema = z.enum(["hero", "large", "medium", "small"]);
-export const stickerKindSchema = z.enum([
-  "star", "cat", "scribble", "washi", "shrug", "corner", "heart", "flower", "sparkle",
-]);
 
 // canvas fractions: a little slack past the edges is fine, nonsense isn't
 export const fraction = z.number().finite().min(-0.5).max(1.5);

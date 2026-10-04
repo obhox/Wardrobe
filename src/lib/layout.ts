@@ -3,6 +3,12 @@ import type { Item, LayoutMode, SortKey, Section } from "./types";
 // Positions are stored as fractions (0..1) of the canvas, so they survive
 // canvas resizes. Arrange algorithms return new fractional positions.
 
+/** A stored layout value → a current one. Layouts that were removed (shelves,
+ *  columns, the old tidy grid and gallery) all read as the board. */
+export function toLayoutMode(value: string | null | undefined): LayoutMode {
+  return value === "free" ? "free" : "grid";
+}
+
 export function sortItems(
   items: Item[],
   sortKey: SortKey,
@@ -33,7 +39,7 @@ export function sortItems(
   }
 }
 
-// A little deterministic jitter so grids never look sterile (brief §16).
+// A little deterministic jitter so a tidied collage never looks sterile (brief §16).
 function jitter(seed: number, amount: number) {
   const x = Math.sin(seed * 99.7) * 10000;
   return (x - Math.floor(x) - 0.5) * 2 * amount;
@@ -46,93 +52,6 @@ export interface Placement {
   rotation: number;
 }
 
-/**
- * Compute fractional placements for a given layout mode + sort key.
- * Returns null for "free" (keeps stored positions) and "gallery"
- * (a scrollable CSS grid that flows items rather than positioning them).
- */
-export function computeLayout(
-  items: Item[],
-  sections: Section[],
-  mode: LayoutMode,
-  sortKey: SortKey,
-  opts: { maxCols?: number } = {}
-): Placement[] | null {
-  if (mode === "free" || mode === "gallery") return null;
-
-  const sorted = sortItems(items, sortKey, sections);
-
-  if (mode === "grid") {
-    const ideal = Math.max(3, Math.ceil(Math.sqrt(sorted.length)) + 1);
-    // never more columns than fit across the canvas (phones)
-    const cols = Math.max(2, Math.min(ideal, opts.maxCols ?? ideal));
-    return sorted.map((it, i) => {
-      const r = Math.floor(i / cols);
-      const c = i % cols;
-      return {
-        id: it.id,
-        posX: (c + 0.5) / cols + jitter(i + 1, 0.02),
-        posY: (r + 0.7) / (Math.ceil(sorted.length / cols) + 1) +
-          jitter(i + 7, 0.02),
-        rotation: jitter(i + 3, 4),
-      };
-    });
-  }
-
-  // shelves & columns group by section
-  const grouped = groupBySection(sorted, sections);
-
-  if (mode === "shelves") {
-    const rows = grouped.length;
-    const out: Placement[] = [];
-    grouped.forEach((group, r) => {
-      const y = (r + 0.7) / (rows + 1);
-      group.items.forEach((it, c) => {
-        out.push({
-          id: it.id,
-          posX: (c + 0.6) / (group.items.length + 1),
-          posY: y + jitter(r * 31 + c, 0.015),
-          rotation: jitter(r * 13 + c, 3),
-        });
-      });
-    });
-    return out;
-  }
-
-  // columns: one column per section
-  const colsN = grouped.length;
-  const out: Placement[] = [];
-  grouped.forEach((group, ci) => {
-    const x = (ci + 0.6) / (colsN + 1);
-    group.items.forEach((it, ri) => {
-      out.push({
-        id: it.id,
-        posX: x + jitter(ci * 17 + ri, 0.015),
-        posY: (ri + 0.7) / (group.items.length + 1),
-        rotation: jitter(ci * 7 + ri, 3),
-      });
-    });
-  });
-  return out;
-}
-
-function groupBySection(items: Item[], sections: Section[]) {
-  const order = [...sections].sort((a, b) => a.order - b.order);
-  const groups = order.map((s) => ({
-    section: s,
-    items: items.filter((i) => i.sectionId === s.id),
-  }));
-  const unsorted = items.filter(
-    (i) => !i.sectionId || !sections.some((s) => s.id === i.sectionId)
-  );
-  if (unsorted.length)
-    groups.push({
-      section: { id: "__unsorted", name: "unsorted", order: 999 },
-      items: unsorted,
-    });
-  return groups.filter((g) => g.items.length > 0);
-}
-
 // "tidy up" in free mode: scatter into a loose collage that avoids the corners,
 // following the current sort (so "by color" tidies into a loose rainbow).
 export function tidyScatter(items: Item[], sortKey: SortKey = "recent", sections: Section[] = []): Placement[] {
@@ -142,20 +61,4 @@ export function tidyScatter(items: Item[], sortKey: SortKey = "recent", sections
     posY: 0.16 + ((i * 0.29 + jitter(i + 5, 0.06) + 0.5) % 0.68),
     rotation: jitter(i + 2, 12),
   }));
-}
-
-// Section labels for shelves / columns (drawn as rails on the canvas).
-export function sectionRails(
-  items: Item[],
-  sections: Section[],
-  mode: LayoutMode
-): { id: string; label: string; x: number; y: number }[] {
-  if (mode !== "shelves" && mode !== "columns") return [];
-  const groups = groupBySection(items, sections);
-  const n = groups.length;
-  return groups.map((g, i) =>
-    mode === "shelves"
-      ? { id: g.section.id, label: g.section.name, x: 0.02, y: (i + 0.7) / (n + 1) }
-      : { id: g.section.id, label: g.section.name, x: (i + 0.6) / (n + 1), y: 0.06 }
-  );
 }

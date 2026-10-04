@@ -56,7 +56,6 @@ export async function POST(req: NextRequest) {
         data: {
           handle,
           recoveryEmail: email,
-          defaultTheme: "daylight",
           wardrobes: { create: wardrobeCreateData("closet", { title: `${handle}'s wardrobe` }) },
         },
       });

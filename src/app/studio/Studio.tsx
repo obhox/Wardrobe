@@ -3,8 +3,7 @@ import { useEffect, useState } from "react";
 import { MotionConfig } from "framer-motion";
 import { useStore } from "@/lib/store";
 import type { WardrobePayload } from "@/lib/types";
-import { PATTERN_CLASS } from "@/lib/theme";
-import { groundAttr, groundVars } from "@/lib/ground";
+import { THEMES } from "@/lib/theme";
 import { track, identify } from "@/lib/analytics";
 import { useIsDesktop } from "@/lib/hooks";
 import Sidebar from "@/components/directory/Sidebar";
@@ -44,26 +43,13 @@ export default function Studio({ initial, user }: { initial: WardrobePayload; us
     return true;
   });
 
-  const ground = payload?.wardrobe.theme.ground;
-  const accent = payload?.wardrobe.theme.accent;
+  const theme = payload?.wardrobe.theme;
 
+  // the browser's toolbar colour follows the wardrobe's ground
   useEffect(() => {
-    if (accent) document.documentElement.dataset.accent = accent;
-  }, [accent]);
-
-  // keep <html data-ground> (and custom-colour tokens) in sync so the whole
-  // page — including overlays outside the canvas — re-themes
-  useEffect(() => {
-    if (!ground) return;
-    const root = document.documentElement;
-    root.dataset.ground = groundAttr(ground);
-    const vars = groundVars(ground);
-    const keys = ["--ground", "--ground-haze", "--ground-dusk", "--ink", "--ink-soft", "--rule", "--panel", "--shadow", "--shadow-strong"];
-    for (const k of keys) root.style.removeProperty(k);
-    if (vars) for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v);
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute("content", getComputedStyle(root).getPropertyValue("--ground").trim() || "#a9c4f5");
-  }, [ground]);
+    const swatch = THEMES.find((t) => t.id === theme)?.swatch;
+    if (swatch) document.querySelector('meta[name="theme-color"]')?.setAttribute("content", swatch);
+  }, [theme]);
 
   useEffect(() => {
     identify(user.id, user.email);
@@ -89,11 +75,12 @@ export default function Studio({ initial, user }: { initial: WardrobePayload; us
   }, [setPanel]);
 
   if (!payload) return null;
-  const { theme } = payload.wardrobe;
 
   return (
     <MotionConfig reducedMotion="user">
-      <div className="relative flex h-dvh w-full flex-col overflow-hidden md:flex-row">
+      {/* data-theme here so the directory and panels re-theme with the canvas;
+          the ground is painted here too, under the translucent directory */}
+      <div data-theme={theme} className="relative flex h-dvh w-full flex-col overflow-hidden bg-ground md:flex-row">
         {/* mobile: compact top bar with section chips (brief §20: directory on top) */}
         <MobileBar onOpenDirectory={() => setDrawer(true)} />
 
@@ -111,9 +98,6 @@ export default function Studio({ initial, user }: { initial: WardrobePayload; us
 
         {/* canvas */}
         <main id={STAGE_ID} className="ground-field relative min-h-0 flex-1 overflow-hidden" aria-label="canvas">
-          {theme.pattern !== "none" && (
-            <div className={`pointer-events-none absolute inset-0 ${PATTERN_CLASS[theme.pattern]}`} />
-          )}
           <Canvas />
           <OwnerControls />
         </main>

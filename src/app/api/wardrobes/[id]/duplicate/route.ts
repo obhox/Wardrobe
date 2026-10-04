@@ -5,7 +5,7 @@ import { error, json, notFound, unauthorized } from "@/lib/server/http";
 
 export const dynamic = "force-dynamic";
 
-// POST → copy a wardrobe's theme, sections and stickers (not its items)
+// POST → copy a wardrobe's theme and sections (not its items)
 // — a quick way to start a new canvas with the same look.
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
@@ -14,7 +14,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 
   const src = await prisma.wardrobe.findFirst({
     where: { id, ownerId: user.id },
-    include: { sections: true, stickers: true },
+    include: { sections: true },
   });
   if (!src) return notFound();
   const n = await prisma.wardrobe.count({ where: { ownerId: user.id } });
@@ -26,17 +26,12 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
       title: `${src.title} (copy)`.slice(0, 60),
       tagline: src.tagline,
       icon: src.icon,
-      ground: src.ground,
-      pattern: src.pattern,
-      accent: src.accent,
+      theme: src.theme,
       layoutMode: src.layoutMode,
       sortKey: src.sortKey,
       order: n,
       sections: {
         create: src.sections.map(({ name, icon, color, order, shared }) => ({ name, icon, color, order, shared })),
-      },
-      stickers: {
-        create: src.stickers.map(({ kind, posX, posY, rotation, scale }) => ({ kind, posX, posY, rotation, scale })),
       },
     },
   });
