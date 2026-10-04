@@ -1,8 +1,10 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ChevronsUpDown, Plus } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { api } from "@/lib/api";
+import { cx } from "@/lib/cx";
 
 // The wardrobe title doubles as a switcher between a person's wardrobes.
 export default function WardrobeSwitcher({ onNavigate }: { onNavigate?: () => void }) {
@@ -56,44 +58,40 @@ export default function WardrobeSwitcher({ onNavigate }: { onNavigate?: () => vo
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="group flex w-full items-center gap-2 rounded-lg text-left"
+        className="group flex w-full items-center gap-2 rounded-control text-left"
       >
-        <span className="min-w-0 flex-1 truncate font-[family-name:var(--font-display)] text-xl lowercase">
-          {wardrobe.icon ?? "✦"} {wardrobe.title}
-        </span>
-        <span aria-hidden className="text-xs text-ink-soft transition group-hover:text-ink">
-          {open ? "▴" : "▾"}
-        </span>
+        <span className="cap-first min-w-0 flex-1 truncate font-display text-heading">{wardrobe.title}</span>
+        <ChevronsUpDown aria-hidden className="h-4 w-4 shrink-0 text-ink-faint transition group-hover:text-ink" />
       </button>
 
       {open && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-2 rounded-xl border border-rule bg-panel p-1.5 shadow-[0_18px_40px_var(--shadow)]">
-          <ul role="listbox" aria-label="your wardrobes" className="thin-scroll max-h-72 overflow-y-auto">
+        <div className="absolute left-0 right-0 top-full z-50 mt-2 rounded-card border border-rule bg-panel p-1.5 shadow-card">
+          <ul role="listbox" aria-label="Your wardrobes" className="thin-scroll max-h-72 overflow-y-auto">
             {wardrobes.map((w) => (
               <li key={w.id}>
                 <button
                   role="option"
                   aria-selected={w.id === wardrobe.id}
                   onClick={() => go(w.id)}
-                  className={
-                    "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm lowercase transition " +
-                    (w.id === wardrobe.id ? "bg-ink/8" : "hover:bg-ink/5")
-                  }
+                  className={cx(
+                    "flex w-full items-center gap-2 rounded-control px-2.5 py-2 text-left transition",
+                    w.id === wardrobe.id ? "bg-ink/7" : "hover:bg-ink/4"
+                  )}
                 >
-                  <span aria-hidden className="w-4 text-center">{w.icon ?? "✦"}</span>
-                  <span className="min-w-0 flex-1 truncate">{w.title}</span>
-                  <span className="tabular text-xs text-ink-soft">{w.count}</span>
+                  <span aria-hidden className="w-4 text-center text-ink-soft">{w.icon ?? "✦"}</span>
+                  <span className="cap-first min-w-0 flex-1 truncate">{w.title}</span>
+                  <span className="label-caps tabular text-ink-faint">{w.count}</span>
                 </button>
               </li>
             ))}
           </ul>
-          <div className="mt-1 flex gap-1 border-t border-rule pt-1.5">
+          <div className="mt-1 flex gap-1 border-t border-rule pt-1.5 text-caption">
             <button
               onClick={quickNew}
               disabled={busy}
-              className="flex-1 rounded-lg px-2 py-1.5 text-xs lowercase hover:bg-ink/5 disabled:opacity-50"
+              className="flex flex-1 items-center justify-center gap-1 rounded-control px-2 py-2 hover:bg-ink/4 disabled:opacity-50"
             >
-              + new wardrobe
+              <Plus aria-hidden className="h-3.5 w-3.5" /> New wardrobe
             </button>
             <button
               onClick={() => {
@@ -101,9 +99,9 @@ export default function WardrobeSwitcher({ onNavigate }: { onNavigate?: () => vo
                 setPanel("wardrobes");
                 onNavigate?.();
               }}
-              className="flex-1 rounded-lg px-2 py-1.5 text-xs lowercase hover:bg-ink/5"
+              className="flex-1 rounded-control px-2 py-2 hover:bg-ink/4"
             >
-              manage…
+              Manage
             </button>
           </div>
         </div>

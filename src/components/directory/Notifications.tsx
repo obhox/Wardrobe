@@ -60,21 +60,21 @@ export default function Notifications() {
       <button
         onClick={toggle}
         aria-expanded={open}
-        aria-label={unread ? `notifications, ${unread} new` : "notifications"}
-        className="relative underline-offset-4 hover:text-ink hover:underline"
+        aria-label={unread ? `Alerts, ${unread} new` : "Alerts"}
+        className="relative rounded py-1 underline-offset-4 hover:text-ink hover:underline"
       >
-        alerts
+        Alerts
         {unread > 0 && (
-          <span className="accent-pin absolute -right-3 -top-2 min-w-4 rounded-full px-1 text-center text-[10px] leading-4">
+          <span className="accent-pin absolute -right-3.5 -top-1 min-w-4 rounded-full px-1 text-center font-mono text-label leading-4">
             {unread}
           </span>
         )}
       </button>
       {open && (
-        <div className="absolute bottom-full left-1/2 z-50 mb-2 w-[min(18rem,calc(100vw-2rem))] -translate-x-1/2 rounded-xl border border-rule bg-panel p-2 text-ink shadow-[0_18px_40px_var(--shadow)]">
+        <div className="absolute bottom-full left-0 z-50 mb-2 w-[min(18rem,calc(100vw-2rem))] rounded-card border border-rule bg-panel p-2 text-ink shadow-card">
           {list.length === 0 ? (
-            <p className="p-2 text-xs lowercase text-ink-soft">
-              no alerts yet. want items with a link are checked for price drops a few times a day.
+            <p className="p-2 text-caption text-ink-soft">
+              No alerts yet. Items you want that have a product link are checked for price drops once a day.
             </p>
           ) : (
             <ul className="thin-scroll max-h-72 overflow-y-auto">
@@ -88,13 +88,13 @@ export default function Notifications() {
                         if (here) select(n.itemId);
                         setOpen(false);
                       }}
-                      className="w-full rounded-lg px-2 py-1.5 text-left text-xs lowercase hover:bg-ink/5 disabled:cursor-default disabled:hover:bg-transparent"
+                      className="cap-first w-full rounded-control px-2 py-1.5 text-left text-caption hover:bg-ink/4 disabled:cursor-default disabled:hover:bg-transparent"
                     >
                       <span className={n.readAt ? "text-ink-soft" : ""}>
                         {n.kind === "target_hit" ? "◎ " : "↓ "}
                         {n.body}
                       </span>
-                      <span className="block text-[10px] text-ink-soft">
+                      <span className="label-caps block text-ink-faint">
                         {new Date(n.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
                       </span>
                     </button>

@@ -1,22 +1,42 @@
 @import "tailwindcss";
 
 /* ------------------------------------------------------------------ *
- *  wardrobe — design tokens (brief §13/§14)
- *  Calm ground so cutouts sing; accents come from the objects.
+ *  Design tokens
+ *  Paper-like neutrals for the app itself, a serif for headings, a
+ *  clean sans for the interface, mono for prices and small labels.
+ *  A wardrobe's theme (below) only colours the stage its cutouts sit on.
  * ------------------------------------------------------------------ */
 
 :root {
-  /* pages without a wardrobe (landing, sign-in) sit on the periwinkle ground */
-  --ground: #a9c4f5;
-  --ground-haze: #bcd2f8;
-  --ground-dusk: #9bb8ef;
+  /* surfaces */
+  --ground: #faf9f6; /* the page */
+  --ground-haze: #ffffff;
+  --ground-dusk: #f1eee8;
+  --panel: #ffffff; /* raised: cards, sheets, fields */
+  --wash: #f3f1ec; /* quiet fills: tiles, hover, inset areas */
 
-  --ink: #14161b;
-  --ink-soft: #3a4150;
-  --rule: rgba(20, 22, 27, 0.42);
-  --panel: #eef2fb;
-  --shadow: rgba(36, 54, 96, 0.28);
-  --shadow-strong: rgba(36, 54, 96, 0.4);
+  /* text */
+  --ink: #1a1a18;
+  --ink-soft: #5b5952; /* secondary text, 6.6:1 on the page */
+  --ink-faint: #76736a; /* placeholders and hints, 4.5:1 on the page */
+
+  /* lines */
+  --rule: rgba(26, 26, 24, 0.14); /* dividers, card edges */
+  --rule-strong: rgba(26, 26, 24, 0.42); /* field and button outlines */
+
+  /* shadow tints (the elevations are defined in @theme) */
+  --shadow-color: rgba(40, 36, 28, 0.1);
+  --shadow-color-strong: rgba(40, 36, 28, 0.18);
+
+  /* pins and highlights — never large fields */
+  --accent: #1a1a18;
+  --accent-ink: #ffffff;
+
+  /* meaning */
+  --danger: #b3261e; /* 6.5:1 on white, and under white text */
+  --danger-wash: #fbebe9;
+  --success: #2f6b43;
+  --warning: #8a5a00;
 
   /* object colours: section dots and theme accents */
   --blush: #f47d7d;
@@ -26,28 +46,24 @@
   --cobalt: #5a82b6;
   --terracotta: #b9633d;
 
-  /* pins, chips, highlights — never large fields (brief §13) */
-  --accent: var(--cobalt);
-  --accent-ink: #ffffff;
-
-  --font-display: "Martian Mono", "DM Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-  --font-mono: "Spline Sans Mono", "DM Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-display: var(--font-fraunces), "Iowan Old Style", Georgia, serif;
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-/* themes — a wardrobe picks one; each sets the ground with a tuned ink,
-   shadow and accent (brief §13). Set with data-theme where a wardrobe shows. */
+/* themes — a wardrobe picks one; each sets the stage's ground with a tuned
+   ink, shadow and accent. Set with data-theme on the stage. */
 [data-theme] {
   color: var(--ink);
 }
 [data-theme="paper"] {
   --ground: #faf9f6;
   --ground-haze: #ffffff;
-  --ground-dusk: #f0ede6;
+  --ground-dusk: #f1eee8;
   --ink: #1a1a18;
-  --ink-soft: #55534d;
-  --panel: #ffffff;
-  --shadow: rgba(60, 54, 40, 0.18);
-  --shadow-strong: rgba(60, 54, 40, 0.3);
+  --ink-soft: #5b5952;
+  --shadow-color: rgba(60, 54, 40, 0.16);
+  --shadow-color-strong: rgba(60, 54, 40, 0.28);
   --accent: #1a1a18;
   --accent-ink: #ffffff;
 }
@@ -57,8 +73,8 @@
   --ground-dusk: #e7e0d2;
   --ink: #1d1a14;
   --ink-soft: #4a443a;
-  --shadow: rgba(80, 70, 50, 0.22);
-  --shadow-strong: rgba(80, 70, 50, 0.34);
+  --shadow-color: rgba(80, 70, 50, 0.22);
+  --shadow-color-strong: rgba(80, 70, 50, 0.34);
   --accent: var(--brass);
   --accent-ink: #1d1606;
 }
@@ -68,8 +84,8 @@
   --ground-dusk: #c6d2b8;
   --ink: #19201a;
   --ink-soft: #42503f;
-  --shadow: rgba(58, 78, 50, 0.22);
-  --shadow-strong: rgba(58, 78, 50, 0.34);
+  --shadow-color: rgba(58, 78, 50, 0.22);
+  --shadow-color-strong: rgba(58, 78, 50, 0.34);
   --accent: var(--olive);
   --accent-ink: #ffffff;
 }
@@ -79,8 +95,8 @@
   --ground-dusk: #efd99c;
   --ink: #201c10;
   --ink-soft: #514a34;
-  --shadow: rgba(120, 96, 30, 0.22);
-  --shadow-strong: rgba(120, 96, 30, 0.34);
+  --shadow-color: rgba(120, 96, 30, 0.22);
+  --shadow-color-strong: rgba(120, 96, 30, 0.34);
   --accent: var(--terracotta);
   --accent-ink: #ffffff;
 }
@@ -90,8 +106,8 @@
   --ground-dusk: #eec0d0;
   --ink: #20141a;
   --ink-soft: #533a45;
-  --shadow: rgba(120, 50, 80, 0.2);
-  --shadow-strong: rgba(120, 50, 80, 0.32);
+  --shadow-color: rgba(120, 50, 80, 0.2);
+  --shadow-color-strong: rgba(120, 50, 80, 0.32);
   --accent: var(--blush);
   --accent-ink: #ffffff;
 }
@@ -101,8 +117,8 @@
   --ground-dusk: #9bb8ef;
   --ink: #14161b;
   --ink-soft: #3a4150;
-  --shadow: rgba(36, 54, 96, 0.28);
-  --shadow-strong: rgba(36, 54, 96, 0.4);
+  --shadow-color: rgba(36, 54, 96, 0.28);
+  --shadow-color-strong: rgba(36, 54, 96, 0.4);
   --accent: var(--cobalt);
   --accent-ink: #ffffff;
 }
@@ -110,34 +126,79 @@
   --ground: #1f2330;
   --ground-haze: #2a3042;
   --ground-dusk: #161a24;
+  --panel: #2a3042;
+  --wash: #333a4f;
   --ink: #eef1f8;
   --ink-soft: #aeb6c8;
-  --rule: rgba(238, 241, 248, 0.3);
-  --panel: #2a3042;
-  --shadow: rgba(0, 0, 0, 0.45);
-  --shadow-strong: rgba(0, 0, 0, 0.6);
+  --ink-faint: #8f98ac;
+  --rule: rgba(238, 241, 248, 0.16);
+  --rule-strong: rgba(238, 241, 248, 0.4);
+  --shadow-color: rgba(0, 0, 0, 0.45);
+  --shadow-color-strong: rgba(0, 0, 0, 0.6);
   --accent: var(--honey);
   --accent-ink: #20190a;
 }
 
-/* expose tokens to Tailwind utilities (bg-ground, text-ink, …) */
+/* colours and fonts follow the variables above, so they re-theme in place */
 @theme inline {
   --color-ground: var(--ground);
   --color-ground-haze: var(--ground-haze);
   --color-ground-dusk: var(--ground-dusk);
+  --color-panel: var(--panel);
+  --color-wash: var(--wash);
   --color-ink: var(--ink);
   --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
   --color-rule: var(--rule);
-  --color-panel: var(--panel);
+  --color-rule-strong: var(--rule-strong);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-danger: var(--danger);
+  --color-danger-wash: var(--danger-wash);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
   --color-blush: var(--blush);
   --color-olive: var(--olive);
   --color-honey: var(--honey);
   --color-brass: var(--brass);
   --color-cobalt: var(--cobalt);
   --color-terracotta: var(--terracotta);
-  --color-accent: var(--accent);
+
   --font-display: var(--font-display);
+  --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
+
+  /* three elevations */
+  --shadow-control: 0 1px 2px var(--shadow-color);
+  --shadow-card: 0 8px 24px -6px var(--shadow-color), 0 2px 6px -2px var(--shadow-color);
+  --shadow-overlay: 0 28px 64px -16px var(--shadow-color-strong), 0 10px 24px -10px var(--shadow-color);
+}
+
+@theme {
+  /* type scale: display sizes are for the serif, the rest for the sans */
+  --text-hero: clamp(2.75rem, 7vw, 4.5rem);
+  --text-hero--line-height: 1;
+  --text-hero--letter-spacing: -0.02em;
+  --text-display: 2.25rem;
+  --text-display--line-height: 1.1;
+  --text-display--letter-spacing: -0.015em;
+  --text-heading: 1.5rem;
+  --text-heading--line-height: 1.2;
+  --text-heading--letter-spacing: -0.01em;
+  --text-title: 1.125rem;
+  --text-title--line-height: 1.3;
+  --text-body: 0.9375rem;
+  --text-body--line-height: 1.5;
+  --text-caption: 0.8125rem;
+  --text-caption--line-height: 1.4;
+  --text-label: 0.6875rem;
+  --text-label--line-height: 1.3;
+  --text-label--letter-spacing: 0.07em;
+
+  /* three corner sizes (pills use rounded-full) */
+  --radius-control: 0.625rem; /* buttons, fields */
+  --radius-card: 0.875rem; /* tiles, cards, popovers */
+  --radius-sheet: 1.375rem; /* dialogs, sheets */
 }
 
 * {
@@ -153,15 +214,37 @@ body {
   margin: 0;
   background: var(--ground);
   color: var(--ink);
-  font-family: var(--font-mono);
-  font-size: 16.5px;
-  line-height: 1.55;
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  transition: background-color 0.5s ease, color 0.3s ease;
 }
 
-/* radial light over the flat ground — gives the canvas depth */
+/* small mono label: field captions, section counts, tags */
+@utility label-caps {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1.3;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+/* prices line up in columns */
+@utility price {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* names people typed in lowercase still open with a capital */
+@utility cap-first {
+  &::first-letter {
+    text-transform: uppercase;
+  }
+}
+
+/* soft light over the stage's flat ground — gives the canvas depth */
 .ground-field {
   background:
     radial-gradient(120% 90% at 50% 18%, var(--ground-haze), transparent 60%),
@@ -171,19 +254,19 @@ body {
 
 /* clay-like cutout shadow (brief §15) */
 .cutout-shadow {
-  filter: drop-shadow(0 16px 18px var(--shadow));
+  filter: drop-shadow(0 14px 16px var(--shadow-color));
   transition: filter 0.25s ease;
 }
 .cutout-shadow:hover {
-  filter: drop-shadow(0 24px 26px var(--shadow-strong));
+  filter: drop-shadow(0 22px 24px var(--shadow-color-strong));
 }
 /* "want" items: a softer shadow — not here yet (brief §8) */
 .cutout-shadow-soft {
-  filter: drop-shadow(0 10px 12px var(--shadow)) saturate(0.92);
+  filter: drop-shadow(0 10px 12px var(--shadow-color)) saturate(0.92);
   transition: filter 0.25s ease;
 }
 .cutout-shadow-soft:hover {
-  filter: drop-shadow(0 20px 22px var(--shadow-strong));
+  filter: drop-shadow(0 20px 22px var(--shadow-color-strong));
 }
 
 .accent-pin {
@@ -193,12 +276,12 @@ body {
 
 /* transparent-background preview */
 .checker {
-  background-color: color-mix(in srgb, var(--panel) 70%, transparent);
+  background-color: var(--wash);
   background-image:
-    linear-gradient(45deg, color-mix(in srgb, var(--ink) 7%, transparent) 25%, transparent 25%),
-    linear-gradient(-45deg, color-mix(in srgb, var(--ink) 7%, transparent) 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, color-mix(in srgb, var(--ink) 7%, transparent) 75%),
-    linear-gradient(-45deg, transparent 75%, color-mix(in srgb, var(--ink) 7%, transparent) 75%);
+    linear-gradient(45deg, color-mix(in srgb, var(--ink) 6%, transparent) 25%, transparent 25%),
+    linear-gradient(-45deg, color-mix(in srgb, var(--ink) 6%, transparent) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, color-mix(in srgb, var(--ink) 6%, transparent) 75%),
+    linear-gradient(-45deg, transparent 75%, color-mix(in srgb, var(--ink) 6%, transparent) 75%);
   background-size: 14px 14px;
   background-position: 0 0, 0 7px, 7px -7px, -7px 0;
 }
@@ -208,7 +291,7 @@ body {
   background: linear-gradient(
     100deg,
     color-mix(in srgb, var(--ink) 6%, transparent) 20%,
-    color-mix(in srgb, var(--panel) 80%, transparent) 50%,
+    color-mix(in srgb, var(--ink) 2%, transparent) 50%,
     color-mix(in srgb, var(--ink) 6%, transparent) 80%
   );
   background-size: 250% 100%;
@@ -269,15 +352,17 @@ body {
   width: 6px;
 }
 .thin-scroll::-webkit-scrollbar-thumb {
-  background: var(--rule);
+  background: var(--rule-strong);
   border-radius: 999px;
 }
 
-/* visible focus rings (brief §20) */
-:where(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 2px;
-  border-radius: 4px;
+/* visible focus rings (brief §20). In the base layer so a utility can opt an
+   element out — unlayered, this rule would beat every `outline-none`. */
+@layer base {
+  :where(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
 }
 
 .tabular {
@@ -302,14 +387,4 @@ body {
     min-width: 2rem;
     touch-action: manipulation;
   }
-  button.no-touch-min,
-  .no-touch-min {
-    min-height: 0;
-    min-width: 0;
-  }
-}
-
-/* respect the notch / home indicator on phones */
-.safe-bottom {
-  padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }

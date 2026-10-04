@@ -5,7 +5,7 @@ import { startRegistration } from "@simplewebauthn/browser";
 import { useStore } from "@/lib/store";
 import { api } from "@/lib/api";
 import { CURRENCIES } from "@/lib/currency";
-import Dialog, { SheetHeader } from "@/components/ui/Dialog";
+import Dialog from "@/components/ui/Dialog";
 import { Field, Group, PrimaryButton, QuietButton } from "@/components/ui/controls";
 import type { StudioUser } from "@/app/studio/Studio";
 
@@ -104,8 +104,7 @@ export default function AccountPanel({ user }: { user: StudioUser }) {
   }
 
   return (
-    <Dialog title="account" variant="sheet" onClose={close} labelledBy="account-title">
-      <SheetHeader id="account-title" title="account" onClose={close} />
+    <Dialog title="Account" variant="sheet" onClose={close}>
 
       <Group label="your handle — the public name on your tag">
         <div className="rounded-lg border border-rule bg-ground/40 px-3 py-2.5 text-[15px] lowercase">✦ {user.handle}</div>

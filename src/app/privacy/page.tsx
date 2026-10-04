@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default function Privacy() {
   return (
     <main className="ground-field min-h-dvh px-6 py-16">
-      <article className="mx-auto max-w-2xl rounded-2xl border border-rule bg-panel p-8 text-sm leading-relaxed lowercase text-ink-soft shadow-[0_24px_60px_var(--shadow)]">
+      <article className="mx-auto max-w-2xl rounded-2xl border border-rule bg-panel p-8 text-sm leading-relaxed lowercase text-ink-soft shadow-overlay">
         <h1 className="font-[family-name:var(--font-display)] text-2xl text-ink">privacy</h1>
         <p className="mt-2 text-xs">last updated 22 september 2026</p>
 

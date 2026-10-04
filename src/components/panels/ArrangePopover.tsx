@@ -1,20 +1,25 @@
 "use client";
+import { Check } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { useIsDesktop } from "@/lib/hooks";
+import { cx } from "@/lib/cx";
 import type { LayoutMode, SortKey } from "@/lib/types";
 import Dialog from "@/components/ui/Dialog";
+import { Button } from "@/components/ui/Button";
+import { FormField } from "@/components/ui/Field";
+import { Segmented } from "@/components/ui/Segmented";
 
-const LAYOUTS: { id: LayoutMode; label: string }[] = [
-  { id: "free", label: "collage" },
-  { id: "grid", label: "board" },
+const LAYOUTS: { value: LayoutMode; label: string }[] = [
+  { value: "free", label: "Collage" },
+  { value: "grid", label: "Board" },
 ];
 
 const SORTS: { id: SortKey; label: string }[] = [
-  { id: "recent", label: "recent" },
-  { id: "color", label: "by color ✦" },
-  { id: "section", label: "by section" },
-  { id: "status", label: "by status" },
-  { id: "az", label: "a–z" },
+  { id: "recent", label: "Newest first" },
+  { id: "color", label: "By colour" },
+  { id: "section", label: "By section" },
+  { id: "status", label: "Owned, then want" },
+  { id: "az", label: "A to Z" },
 ];
 
 // Layout × sort (brief §16). The board flows items live, so your hand-made
@@ -32,63 +37,47 @@ export default function ArrangePopover() {
   const collage = desktop && wardrobe.layoutMode === "free";
 
   return (
-    <Dialog title="arrange" variant="popover" onClose={() => setPanel(null)}>
+    <Dialog title="Arrange" variant="popover" onClose={() => setPanel(null)}>
       {desktop && (
-        <>
-          <div className="text-xs lowercase text-ink-soft">layout</div>
-          <div className="mb-4 mt-2 grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="layout">
-            {LAYOUTS.map((l) => (
-              <button
-                key={l.id}
-                role="radio"
-                aria-checked={wardrobe.layoutMode === l.id}
-                onClick={() => setLayout(l.id)}
-                className={
-                  "rounded-lg px-2 py-2 text-xs lowercase sm:py-1.5 " +
-                  (wardrobe.layoutMode === l.id ? "bg-ink text-panel" : "border border-rule hover:bg-ink/5")
-                }
-              >
-                {l.label}
-              </button>
-            ))}
-          </div>
-        </>
+        <FormField label="Layout" className="mb-5">
+          <Segmented label="Layout" value={wardrobe.layoutMode} onChange={setLayout} options={LAYOUTS} className="flex w-full" />
+        </FormField>
       )}
 
-      <div className="text-xs lowercase text-ink-soft">sort</div>
-      <div className="mt-2 flex flex-col gap-1" role="radiogroup" aria-label="sort">
-        {SORTS.map((s) => (
-          <button
-            key={s.id}
-            role="radio"
-            aria-checked={wardrobe.sortKey === s.id}
-            onClick={() => setSort(s.id)}
-            className={
-              "rounded-lg px-2 py-2 text-left text-xs lowercase sm:py-1.5 " +
-              (wardrobe.sortKey === s.id ? "bg-ink text-panel" : "hover:bg-ink/5")
-            }
-          >
-            {s.label}
-          </button>
-        ))}
-      </div>
+      <FormField label="Sort">
+        <div className="-mx-2 flex flex-col" role="radiogroup" aria-label="Sort">
+          {SORTS.map((s) => {
+            const on = wardrobe.sortKey === s.id;
+            return (
+              <button
+                key={s.id}
+                role="radio"
+                aria-checked={on}
+                onClick={() => setSort(s.id)}
+                className={cx(
+                  "flex h-9 items-center justify-between rounded-control px-2 text-left transition",
+                  on ? "font-medium" : "text-ink-soft hover:bg-ink/4 hover:text-ink"
+                )}
+              >
+                {s.label}
+                {on && <Check aria-hidden className="h-4 w-4" />}
+              </button>
+            );
+          })}
+        </div>
+      </FormField>
 
       {collage ? (
         <>
-          <button
-            onClick={() => tidyUp()}
-            className="mt-4 w-full rounded-lg border border-rule py-2 text-xs lowercase hover:bg-ink/5"
-          >
-            tidy up (follows the sort)
-          </button>
-          <p className="mt-2 text-[11px] lowercase text-ink-soft">
-            the collage keeps your hand placement — sort applies when you tidy up, and to the board.
+          <Button className="mt-4 w-full" onClick={() => tidyUp()}>
+            Tidy up
+          </Button>
+          <p className="mt-2 text-caption text-ink-soft">
+            The collage keeps where you put things. Tidying up rearranges it in the order above.
           </p>
         </>
       ) : (
-        desktop && (
-          <p className="mt-3 text-[11px] lowercase text-ink-soft">your collage is kept — switch back any time.</p>
-        )
+        desktop && <p className="mt-3 text-caption text-ink-soft">Your collage is kept. Switch back any time.</p>
       )}
     </Dialog>
   );

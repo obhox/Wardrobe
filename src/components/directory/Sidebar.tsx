@@ -1,8 +1,11 @@
 "use client";
 import { useMemo, useState } from "react";
+import { ChevronDown, ChevronRight, Plus, Search } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { sortItems } from "@/lib/layout";
+import { cx } from "@/lib/cx";
 import type { Item } from "@/lib/types";
+import { Chip } from "@/components/ui/Chip";
 import SectionRow, { ItemRow } from "./SectionRow";
 import WardrobeSwitcher from "./WardrobeSwitcher";
 import Notifications from "./Notifications";
@@ -65,75 +68,67 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     reorderSections(ids);
   }
 
-  const chip = (f: typeof filter, label: string) => (
-    <button
-      onClick={() => setFilter(f)}
-      aria-pressed={filter === f}
-      className={
-        "rounded-full px-3 py-1 text-xs lowercase transition " +
-        (filter === f ? "bg-ink text-panel" : "border border-rule hover:bg-ink/5")
-      }
-    >
-      {label}
-    </button>
-  );
+  function openPanel(panel: "account" | "stats" | "beautify") {
+    setPanel(panel);
+    onNavigate?.();
+  }
+
+  const footerLink = "rounded py-1 underline-offset-4 hover:text-ink hover:underline";
 
   return (
-    <aside aria-label="directory" className="flex h-full flex-col border-r border-rule bg-panel/90 backdrop-blur md:bg-panel/70">
+    <aside aria-label="Directory" className="flex h-full flex-col border-r border-rule bg-ground">
       <div className="px-4 pt-5">
         <WardrobeSwitcher onNavigate={onNavigate} />
-        <div className="mt-0.5 truncate text-xs lowercase text-ink-soft">
-          {[wardrobe.tagline, `✦ ${wardrobe.handle}`].filter(Boolean).join(" · ")}
-        </div>
+        <p className="mt-0.5 truncate text-caption text-ink-soft">
+          {[wardrobe.tagline, `@${wardrobe.handle}`].filter(Boolean).join(" · ")}
+        </p>
       </div>
 
-      <div className="px-4 pt-4">
+      <div className="relative px-4 pt-4">
         <label htmlFor="directory-search" className="sr-only">
-          search this wardrobe
+          Search this wardrobe
         </label>
+        <Search aria-hidden className="pointer-events-none absolute left-7 top-[1.65rem] h-4 w-4 text-ink-faint" />
         <input
           id="directory-search"
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={(e) => e.key === "Escape" && setSearch("")}
-          placeholder="search…  ( / )"
-          className="w-full rounded-lg border border-rule bg-ground/40 px-3 py-2 text-base lowercase outline-none placeholder:text-ink-soft/60 focus:border-ink md:text-sm"
+          placeholder="Search"
+          className="h-10 w-full rounded-control border border-rule-strong bg-panel pl-9 pr-3 text-base placeholder:text-ink-faint focus:border-ink md:text-sm"
         />
+        {/* the "/" shortcut only exists where there is a keyboard */}
+        {!search && (
+          <kbd className="pointer-events-none absolute right-7 top-[1.6rem] hidden rounded border border-rule px-1.5 font-mono text-label text-ink-faint [@media(hover:hover)]:block">
+            /
+          </kbd>
+        )}
       </div>
 
-      <div className="flex gap-1.5 px-4 pt-3" role="group" aria-label="filter by status">
-        {chip("all", "all")}
-        {chip("owned", "owned")}
-        {chip("want", "want")}
+      <div className="flex gap-1.5 px-4 pt-3" role="group" aria-label="Filter by status">
+        <Chip on={filter === "all"} onClick={() => setFilter("all")}>All</Chip>
+        <Chip on={filter === "owned"} onClick={() => setFilter("owned")}>Owned</Chip>
+        <Chip on={filter === "want"} onClick={() => setFilter("want")}>Want</Chip>
       </div>
 
-      <button
-        onClick={() => {
-          setPanel("add");
-          onNavigate?.();
-        }}
-        className="mx-4 mt-4 rounded-xl bg-ink py-2.5 text-sm lowercase text-panel transition hover:opacity-90"
-      >
-        + add an item
-      </button>
-
-      <nav aria-label="sections" className="thin-scroll mt-4 flex-1 overflow-y-auto px-2 pb-4">
+      <nav aria-label="Sections" className="thin-scroll mt-5 flex-1 overflow-y-auto px-2 pb-4">
+        <h2 className="label-caps px-2 pb-1.5 text-ink-faint">Sections</h2>
         <button
           onClick={() => {
             setSection(null);
             onNavigate?.();
           }}
           aria-pressed={activeSection === null}
-          className={
-            "ml-5 flex w-[calc(100%-1.25rem)] items-center gap-2 rounded-lg px-2 py-1.5 text-[15px] lowercase transition " +
-            (activeSection === null ? "bg-ink/8" : "hover:bg-ink/5")
-          }
+          className={cx(
+            "flex h-9 w-full items-baseline gap-2 rounded-control pl-[1.9rem] pr-2 pt-2 text-left transition",
+            activeSection === null ? "bg-ink/7" : "hover:bg-ink/4"
+          )}
         >
-          everything <span className="tabular text-ink-soft">({items.length})</span>
+          Everything <span className="label-caps tabular text-ink-faint">{items.length}</span>
         </button>
 
-        <ul className="mt-0.5">
+        <ul>
           {sections.map((sec, i) => (
             <SectionRow
               key={sec.id}
@@ -154,48 +149,24 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           ))}
 
           {unsortedCount > 0 && (
-            <li>
-              <div
-                data-section-drop="__unsorted"
-                className={
-                  "flex items-center gap-1.5 rounded-lg px-1.5 py-1 text-[14px] lowercase text-ink-soft " +
-                  (activeSection === "__unsorted" ? "bg-ink/8 " : "hover:bg-ink/5 ") +
-                  (unsortedDrop ? "ring-2 ring-ink" : "")
-                }
-              >
-                <button
-                  onClick={() => toggle("__unsorted")}
-                  aria-expanded={isOpen("__unsorted")}
-                  aria-label={`${isOpen("__unsorted") ? "collapse" : "expand"} unsorted`}
-                  className="w-4 shrink-0 text-[10px] hover:text-ink"
-                >
-                  {isOpen("__unsorted") ? "▾" : "▸"}
-                </button>
-                <span className="h-2 w-2 shrink-0 rounded-full border border-ink-soft" aria-hidden />
-                <button
-                  onClick={() => setSection(activeSection === "__unsorted" ? null : "__unsorted")}
-                  aria-pressed={activeSection === "__unsorted"}
-                  className="min-w-0 flex-1 truncate text-left"
-                >
-                  unsorted <span className="tabular">({unsortedCount})</span>
-                </button>
-              </div>
-              {isOpen("__unsorted") && (
-                <ul className="mb-1 ml-7 border-l border-rule pl-2">
-                  {unsorted.map((it) => (
-                    <ItemRow key={it.id} item={it} onOpen={open} />
-                  ))}
-                </ul>
-              )}
-            </li>
+            <SectionRowUnsorted
+              count={unsortedCount}
+              items={unsorted}
+              active={activeSection === "__unsorted"}
+              expanded={isOpen("__unsorted")}
+              dropOver={unsortedDrop}
+              onToggle={() => toggle("__unsorted")}
+              onSelect={() => setSection(activeSection === "__unsorted" ? null : "__unsorted")}
+              onOpenItem={open}
+            />
           )}
         </ul>
 
         {adding ? (
-          <div className="px-2 pt-2">
+          <div className="px-1 pt-2">
             <input
               autoFocus
-              aria-label="new section name"
+              aria-label="New section name"
               value={newName}
               maxLength={40}
               onChange={(e) => setNewName(e.target.value)}
@@ -208,32 +179,90 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                 }
                 if (e.key === "Escape") setAdding(false);
               }}
-              placeholder="new section… (enter)"
-              className="w-full rounded border border-rule bg-ground/40 px-2 py-1 text-base lowercase outline-none md:text-sm"
+              placeholder="Name it, then press Enter"
+              className="h-9 w-full rounded-control border border-rule-strong bg-panel px-2.5 text-base placeholder:text-ink-faint md:text-sm"
             />
           </div>
         ) : (
           <button
             onClick={() => setAdding(true)}
-            className="ml-5 mt-1 px-2 py-1.5 text-xs lowercase text-ink-soft underline underline-offset-4 hover:text-ink"
+            className="mt-1 flex h-9 items-center gap-1.5 rounded-control pl-[1.9rem] pr-2 text-caption text-ink-soft hover:text-ink"
           >
-            + new section
+            <Plus aria-hidden className="h-3.5 w-3.5" /> New section
           </button>
         )}
-        <p className="ml-7 mt-3 hidden text-[11px] lowercase text-ink-soft/80 md:block">
-          tip: drag a cutout onto a section to file it.
+        <p className="mt-3 hidden pl-[1.9rem] pr-2 text-caption text-ink-faint md:block">
+          In the collage, drag an item onto a section to file it.
         </p>
       </nav>
 
-      <div className="flex items-center justify-between gap-3 border-t border-rule px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-xs lowercase text-ink-soft">
-        <button onClick={() => setPanel("account")} className="underline-offset-4 hover:text-ink hover:underline">
-          account
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-rule px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-caption text-ink-soft">
+        <button onClick={() => openPanel("account")} className={footerLink}>
+          Account
         </button>
         <Notifications />
-        <button onClick={() => setPanel("stats")} className="underline-offset-4 hover:text-ink hover:underline">
-          stats
+        {/* on wider screens these two sit in the toolbar above the stage */}
+        <button onClick={() => openPanel("stats")} className={cx(footerLink, "md:hidden")}>
+          Stats
+        </button>
+        <button onClick={() => openPanel("beautify")} className={cx(footerLink, "md:hidden")}>
+          Appearance
         </button>
       </div>
     </aside>
+  );
+}
+
+// items with no section: a row like the others, without a name to edit
+function SectionRowUnsorted({
+  count,
+  items,
+  active,
+  expanded,
+  dropOver,
+  onToggle,
+  onSelect,
+  onOpenItem,
+}: {
+  count: number;
+  items: Item[];
+  active: boolean;
+  expanded: boolean;
+  dropOver: boolean;
+  onToggle: () => void;
+  onSelect: () => void;
+  onOpenItem: (id: string) => void;
+}) {
+  return (
+    <li>
+      <div
+        data-section-drop="__unsorted"
+        className={cx(
+          "flex h-9 items-center gap-1.5 rounded-control pl-1 pr-1.5 text-ink-soft transition",
+          active ? "bg-ink/7" : "hover:bg-ink/4",
+          dropOver && "ring-2 ring-ink"
+        )}
+      >
+        <button
+          onClick={onToggle}
+          aria-expanded={expanded}
+          aria-label={`${expanded ? "Collapse" : "Expand"} unsorted`}
+          className="flex h-6 w-5 shrink-0 items-center justify-center text-ink-faint hover:text-ink"
+        >
+          {expanded ? <ChevronDown aria-hidden className="h-3.5 w-3.5" /> : <ChevronRight aria-hidden className="h-3.5 w-3.5" />}
+        </button>
+        <span className="h-2 w-2 shrink-0 rounded-full border border-ink-faint" aria-hidden />
+        <button onClick={onSelect} aria-pressed={active} className="flex min-w-0 flex-1 items-baseline gap-2 py-1 text-left">
+          Unsorted <span className="label-caps tabular text-ink-faint">{count}</span>
+        </button>
+      </div>
+      {expanded && (
+        <ul className="mb-1 ml-[1.35rem] border-l border-rule pl-2">
+          {items.map((it) => (
+            <ItemRow key={it.id} item={it} onOpen={onOpenItem} />
+          ))}
+        </ul>
+      )}
+    </li>
   );
 }

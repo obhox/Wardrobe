@@ -1,8 +1,11 @@
 "use client";
 import { useState } from "react";
+import { ChevronDown, ChevronRight, Pencil, X } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { SECTION_COLORS, SECTION_COLOR_HEX } from "@/lib/theme";
+import { cx } from "@/lib/cx";
 import type { Section, SectionColor, Item } from "@/lib/types";
+import { Tag } from "@/components/ui/Chip";
 
 export const SECTION_ICONS = ["✦", "○", "◇", "△", "□", "♡", "✿", "☂", "⚙", "♪", "☀", "✂"];
 
@@ -35,7 +38,7 @@ export default function SectionRow({
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(section.name);
 
-  const dot = section.color ? SECTION_COLOR_HEX[section.color as SectionColor] ?? section.color : "var(--ink-soft)";
+  const dot = section.color ? SECTION_COLOR_HEX[section.color as SectionColor] ?? section.color : "var(--ink-faint)";
   const listId = `section-items-${section.id}`;
 
   function commitName() {
@@ -48,26 +51,26 @@ export default function SectionRow({
     <li>
       <div
         data-section-drop={section.id}
-        className={
-          "group flex items-center gap-1.5 rounded-lg px-1.5 py-1 text-[15px] lowercase transition " +
-          (active ? "bg-ink/8 " : "hover:bg-ink/5 ") +
-          (dropOver ? "ring-2 ring-ink" : "")
-        }
+        className={cx(
+          "group flex h-9 items-center gap-1.5 rounded-control pl-1 pr-1.5 transition",
+          active ? "bg-ink/7" : "hover:bg-ink/4",
+          dropOver && "ring-2 ring-ink"
+        )}
       >
         <button
           onClick={onToggle}
           aria-expanded={expanded}
           aria-controls={listId}
-          aria-label={`${expanded ? "collapse" : "expand"} ${section.name}`}
-          className="w-4 shrink-0 text-[10px] text-ink-soft hover:text-ink"
+          aria-label={`${expanded ? "Collapse" : "Expand"} ${section.name}`}
+          className="flex h-6 w-5 shrink-0 items-center justify-center text-ink-faint hover:text-ink"
         >
-          {expanded ? "▾" : "▸"}
+          {expanded ? <ChevronDown aria-hidden className="h-3.5 w-3.5" /> : <ChevronRight aria-hidden className="h-3.5 w-3.5" />}
         </button>
         <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: dot }} aria-hidden />
         {editing ? (
           <input
             autoFocus
-            aria-label="section name"
+            aria-label="Section name"
             value={name}
             maxLength={40}
             onChange={(e) => setName(e.target.value)}
@@ -79,71 +82,77 @@ export default function SectionRow({
                 setEditing(false);
               }
             }}
-            className="min-w-0 flex-1 rounded border border-rule bg-ground/40 px-1.5 py-1 text-base outline-none sm:py-0 sm:text-[15px]"
+            className="h-7 min-w-0 flex-1 rounded-md border border-rule-strong bg-panel px-1.5 text-base md:text-sm"
           />
         ) : (
-          <button onClick={onSelect} aria-pressed={active} className="min-w-0 flex-1 truncate py-0.5 text-left">
-            {section.icon && section.icon !== "✦" ? `${section.icon} ` : ""}
-            {section.name} <span className="tabular text-ink-soft">({section.count ?? 0})</span>
+          <button onClick={onSelect} aria-pressed={active} className="flex min-w-0 flex-1 items-baseline gap-2 py-1 text-left">
+            <span className="cap-first truncate">
+              {section.icon && section.icon !== "✦" ? `${section.icon} ` : ""}
+              {section.name}
+            </span>
+            <span className="label-caps tabular text-ink-faint">{section.count ?? 0}</span>
           </button>
         )}
 
-        <span className="ml-auto flex shrink-0 items-center gap-1 opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100">
+        <span className="ml-auto flex shrink-0 items-center opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100">
           <button
             onClick={() => {
               setName(section.name);
               setEditing((v) => !v);
             }}
-            className="rounded px-1 text-xs text-ink-soft hover:text-ink"
-            aria-label={`edit ${section.name}`}
+            className="flex h-7 w-7 items-center justify-center rounded-md text-ink-faint hover:text-ink"
+            aria-label={`Edit ${section.name}`}
             aria-expanded={editing}
           >
-            {editing ? "done" : "edit"}
+            <Pencil aria-hidden className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={() => deleteSection(section.id)}
-            className="rounded px-1 text-xs text-ink-soft hover:text-blush"
-            aria-label={`remove ${section.name}`}
+            className="flex h-7 w-7 items-center justify-center rounded-md text-ink-faint hover:text-danger"
+            aria-label={`Remove ${section.name}`}
           >
-            ×
+            <X aria-hidden className="h-3.5 w-3.5" />
           </button>
         </span>
       </div>
 
       {editing && (
-        <div className="mb-2 ml-6 mr-1 mt-1 space-y-2 rounded-lg border border-rule bg-ground/20 p-2">
-          <div className="flex flex-wrap gap-1" role="group" aria-label="icon">
+        <div className="mb-2 ml-6 mr-1 mt-1 space-y-2.5 rounded-card border border-rule bg-panel p-2.5">
+          <div className="flex flex-wrap gap-1" role="group" aria-label="Icon">
             {SECTION_ICONS.map((ic) => (
               <button
                 key={ic}
                 aria-pressed={section.icon === ic}
-                aria-label={`icon ${ic}`}
+                aria-label={`Icon ${ic}`}
                 onClick={() => updateSection(section.id, { icon: ic })}
-                className={"h-7 w-7 rounded-md text-sm " + (section.icon === ic ? "bg-ink text-panel" : "hover:bg-ink/5")}
+                className={cx("h-7 w-7 rounded-md text-sm", section.icon === ic ? "bg-ink text-ground" : "hover:bg-ink/6")}
               >
                 {ic}
               </button>
             ))}
           </div>
-          <div className="flex flex-wrap gap-1.5" role="group" aria-label="colour">
-            {SECTION_COLORS.map((a) => (
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Colour">
+            {SECTION_COLORS.map((c) => (
               <button
-                key={a.id}
-                aria-pressed={section.color === a.id}
-                aria-label={a.id}
-                onClick={() => updateSection(section.id, { color: a.id })}
-                className={"h-6 w-6 rounded-full border-2 " + (section.color === a.id ? "border-ink" : "border-transparent")}
-                style={{ background: a.hex }}
+                key={c.id}
+                aria-pressed={section.color === c.id}
+                aria-label={c.id}
+                onClick={() => updateSection(section.id, { color: c.id })}
+                className={cx("h-6 w-6 rounded-full border-2", section.color === c.id ? "border-ink" : "border-transparent")}
+                style={{ background: c.hex }}
               />
             ))}
           </div>
           {onMove && (
-            <div className="flex gap-2 text-xs lowercase">
+            <div className="flex gap-3 text-caption">
               <button disabled={isFirst} onClick={() => onMove(-1)} className="underline underline-offset-4 disabled:opacity-30">
-                move up
+                Move up
               </button>
               <button disabled={isLast} onClick={() => onMove(1)} className="underline underline-offset-4 disabled:opacity-30">
-                move down
+                Move down
+              </button>
+              <button onClick={() => setEditing(false)} className="ml-auto font-medium">
+                Done
               </button>
             </div>
           )}
@@ -151,9 +160,9 @@ export default function SectionRow({
       )}
 
       {expanded && (
-        <ul id={listId} className="mb-1 ml-7 border-l border-rule pl-2">
+        <ul id={listId} className="mb-1 ml-[1.35rem] border-l border-rule pl-2">
           {items.length === 0 ? (
-            <li className="py-1 text-xs lowercase text-ink-soft">nothing here{active ? "" : " yet"}.</li>
+            <li className="py-1 pl-1 text-caption text-ink-faint">Nothing here{active ? "" : " yet"}.</li>
           ) : (
             items.map((it) => <ItemRow key={it.id} item={it} onOpen={onOpenItem} />)
           )}
@@ -168,10 +177,10 @@ export function ItemRow({ item, onOpen }: { item: Item; onOpen: (id: string) => 
     <li>
       <button
         onClick={() => onOpen(item.id)}
-        className="flex w-full items-center gap-2 rounded px-1 py-0.5 text-left text-[13px] lowercase text-ink-soft hover:bg-ink/5 hover:text-ink"
+        className="flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left text-caption text-ink-soft hover:bg-ink/4 hover:text-ink"
       >
-        <span className="min-w-0 flex-1 truncate">{item.name}</span>
-        {item.status === "want" && <span className="shrink-0 text-[10px]">✦ want</span>}
+        <span className="cap-first min-w-0 flex-1 truncate">{item.name}</span>
+        {item.status === "want" && <Tag className="shrink-0">Want</Tag>}
       </button>
     </li>
   );

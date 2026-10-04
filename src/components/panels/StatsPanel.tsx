@@ -4,7 +4,7 @@ import { useStore } from "@/lib/store";
 import { api } from "@/lib/api";
 import { formatMoney } from "@/lib/currency";
 import type { StatsBucket, WardrobeStats } from "@/lib/types";
-import Dialog, { SheetHeader } from "@/components/ui/Dialog";
+import Dialog from "@/components/ui/Dialog";
 import { Group } from "@/components/ui/controls";
 
 // Closet value and wishlist at a glance, for the open wardrobe. Every price is
@@ -33,8 +33,7 @@ export default function StatsPanel({ defaultCurrency }: { defaultCurrency: strin
   const money = (v: number) => formatMoney(Math.round(v), stats?.currency) ?? "—";
 
   return (
-    <Dialog title="stats" variant="sheet" onClose={close} labelledBy="stats-title">
-      <SheetHeader id="stats-title" title="stats" onClose={close} />
+    <Dialog title="Stats" variant="sheet" onClose={close}>
       <p className="mt-1 text-[11px] lowercase text-ink-soft">
         {wardrobe?.title} · totals in {stats?.currency.toLowerCase() ?? defaultCurrency.toLowerCase()}
       </p>

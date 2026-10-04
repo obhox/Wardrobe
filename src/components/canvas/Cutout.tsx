@@ -4,7 +4,8 @@ import { memo, useLayoutEffect, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import type { Item } from "@/lib/types";
 import { TIER_SIZE } from "@/lib/theme";
-import { proxiedSrc } from "@/lib/img";
+import { ItemFigure } from "@/components/item/ItemTile";
+import { toTile } from "@/components/item/toTile";
 
 interface Props {
   item: Item;
@@ -162,49 +163,23 @@ function Cutout({
             nudge(m[0], m[1]);
           }
         }}
-        className="group relative block h-full w-full select-none rounded-lg"
+        className="group relative block h-full w-full select-none rounded-card"
         aria-label={`${item.name}${item.status === "want" ? ", want" : ""} — arrow keys move it`}
         style={{ WebkitTouchCallout: "none" }}
       >
-        <span
-          className="floaty block h-full w-full"
-          style={
+        <ItemFigure
+          item={toTile(item)}
+          size={size}
+          float={
             {
               "--rot": `${rotation}deg`,
               "--dur": `${6 + (index % 4)}s`,
               "--delay": `${(index % 5) * 0.4}s`,
             } as React.CSSProperties
           }
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={proxiedSrc(item.cutoutUrl || item.imageUrl)}
-            alt={item.name}
-            crossOrigin="anonymous"
-            loading={index > 24 ? "lazy" : "eager"}
-            decoding="async"
-            draggable={false}
-            className={
-              "select-none object-contain " +
-              (item.status === "want" ? "cutout-shadow-soft " : "cutout-shadow ") +
-              // originals that were never cut out sit on a soft chip (brief §15 fallback)
-              (item.cutoutUrl ? "" : "rounded-2xl bg-panel/55 p-1.5")
-            }
-            style={{ width: size, height: size }}
-          />
-        </span>
-
-        {/* want pin (brief §8) */}
-        {item.status === "want" && (
-          <span className="accent-pin absolute -right-1 -top-1 rounded-full px-1.5 py-0.5 text-[10px] lowercase shadow">
-            ✦ want
-          </span>
-        )}
-
-        {/* name tip on hover / focus */}
-        <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-1 -translate-x-1/2 whitespace-nowrap rounded bg-ink/85 px-2 py-0.5 text-[11px] lowercase text-panel opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100">
-          {item.name}
-        </span>
+          eager={index <= 24}
+          crossOrigin="anonymous"
+        />
       </motion.button>
     </motion.div>
   );

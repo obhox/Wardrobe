@@ -23,8 +23,8 @@ const csp = (evalAllowed: boolean) => [
   // Next's inline bootstrap needs 'unsafe-inline'; background removal needs
   // WASM plus the ONNX runtime's blob: glue script
   `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://a.falorb.com ${imgly}${dev || evalAllowed ? " 'unsafe-eval'" : ""}`,
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src 'self' https://fonts.gstatic.com",
+  "style-src 'self' 'unsafe-inline'",
+  "font-src 'self'",
   `img-src 'self' data: blob: ${storage}`.trim(),
   `connect-src 'self' blob: data: https://a.falorb.com ${imgly} ${storage}${dev ? " ws:" : ""}`.trim(),
   "worker-src 'self' blob:",

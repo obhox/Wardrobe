@@ -18,7 +18,7 @@ export default function CombinationLock() {
       {/* luggage tag */}
       <motion.div
         layout
-        className="relative rounded-2xl border border-rule bg-panel/80 backdrop-blur px-7 py-8 shadow-[0_18px_40px_var(--shadow)]"
+        className="relative rounded-2xl border border-rule bg-panel/80 backdrop-blur px-7 py-8 shadow-overlay"
       >
         <div className="absolute -top-3 left-1/2 -translate-x-1/2 h-6 w-6 rounded-full border border-rule bg-ground" />
         <div className="text-center">

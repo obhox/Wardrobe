@@ -9,7 +9,7 @@ import { useIsDesktop } from "@/lib/hooks";
 import Sidebar from "@/components/directory/Sidebar";
 import MobileBar from "@/components/directory/MobileBar";
 import Canvas from "@/components/canvas/Canvas";
-import OwnerControls from "@/components/canvas/OwnerControls";
+import Toolbar from "@/components/canvas/Toolbar";
 import AddItem from "@/components/panels/AddItem";
 import ItemDetail from "@/components/panels/ItemDetail";
 import ArrangePopover from "@/components/panels/ArrangePopover";
@@ -78,9 +78,7 @@ export default function Studio({ initial, user }: { initial: WardrobePayload; us
 
   return (
     <MotionConfig reducedMotion="user">
-      {/* data-theme here so the directory and panels re-theme with the canvas;
-          the ground is painted here too, under the translucent directory */}
-      <div data-theme={theme} className="relative flex h-dvh w-full flex-col overflow-hidden bg-ground md:flex-row">
+      <div className="relative flex h-dvh w-full flex-col overflow-hidden md:flex-row">
         {/* mobile: compact top bar with section chips (brief §20: directory on top) */}
         <MobileBar onOpenDirectory={() => setDrawer(true)} />
 
@@ -89,18 +87,25 @@ export default function Studio({ initial, user }: { initial: WardrobePayload; us
           // hidden drawers must not be reachable by keyboard / screen readers
           inert={!desktop && !drawer ? true : undefined}
           className={
-            "fixed inset-y-0 left-0 z-40 w-[min(300px,86vw)] shrink-0 transition-transform duration-300 md:static md:z-auto md:w-[280px] md:translate-x-0 " +
+            "fixed inset-y-0 left-0 z-40 w-[min(320px,88vw)] shrink-0 transition-transform duration-300 md:static md:z-auto md:w-[272px] md:translate-x-0 " +
             (drawer ? "translate-x-0" : "-translate-x-full")
           }
         >
           <Sidebar onNavigate={() => setDrawer(false)} />
         </div>
 
-        {/* canvas */}
-        <main id={STAGE_ID} className="ground-field relative min-h-0 flex-1 overflow-hidden" aria-label="canvas">
-          <Canvas />
-          <OwnerControls />
-        </main>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <Toolbar />
+          {/* the stage: the only part that takes the wardrobe's theme */}
+          <main
+            id={STAGE_ID}
+            data-theme={theme}
+            aria-label="Canvas"
+            className="ground-field relative min-h-0 flex-1 overflow-hidden md:mb-3 md:mr-3 md:rounded-sheet md:border md:border-rule"
+          >
+            <Canvas />
+          </main>
+        </div>
 
         {openPanel === "add" && <AddItem />}
         {openPanel === "beautify" && <BeautifyPanel />}
@@ -113,9 +118,9 @@ export default function Studio({ initial, user }: { initial: WardrobePayload; us
 
         {drawer && (
           <button
-            aria-label="close directory"
+            aria-label="Close sections"
             onClick={() => setDrawer(false)}
-            className="fixed inset-0 z-30 bg-black/25 md:hidden"
+            className="fixed inset-0 z-30 bg-black/30 md:hidden"
           />
         )}
         <Toasts />

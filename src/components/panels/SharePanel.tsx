@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { captureStage, downloadBlob, shareImage } from "@/lib/screenshot";
 import { track } from "@/lib/analytics";
-import Dialog, { SheetHeader } from "@/components/ui/Dialog";
+import Dialog from "@/components/ui/Dialog";
 import { Group, Toggle } from "@/components/ui/controls";
 
 export default function SharePanel() {
@@ -73,8 +73,7 @@ export default function SharePanel() {
   }
 
   return (
-    <Dialog title="share" variant="sheet" onClose={close} labelledBy="share-title">
-      <SheetHeader id="share-title" title="share" onClose={close} />
+    <Dialog title="Share" variant="sheet" onClose={close}>
       <p className="mt-1 text-[11px] lowercase text-ink-soft">sharing is per wardrobe — this is {wardrobe.title}.</p>
 
       <Group label="share link">

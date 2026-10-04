@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useStore } from "@/lib/store";
 import { api } from "@/lib/api";
-import Dialog, { SheetHeader } from "@/components/ui/Dialog";
+import Dialog from "@/components/ui/Dialog";
 import { Field, Group, PrimaryButton } from "@/components/ui/controls";
 
 const TEMPLATES = [
@@ -59,8 +59,7 @@ export default function WardrobesPanel() {
   }
 
   return (
-    <Dialog title="wardrobes" variant="sheet" onClose={close} labelledBy="wardrobes-title">
-      <SheetHeader id="wardrobes-title" title="your wardrobes" onClose={close} />
+    <Dialog title="Your wardrobes" variant="sheet" onClose={close}>
 
       <Group label="all of them">
         <ul className="space-y-1.5">

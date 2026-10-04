@@ -10,9 +10,13 @@ import { downscaleImage, imageBlob, proxiedSrc, uploadImage } from "@/lib/img";
 import { extractUrl, titleFromUrl } from "@/lib/links";
 import { cutOut, cutoutLooksGood, preloadCutout } from "@/lib/cutout";
 import { track } from "@/lib/analytics";
+import { cx } from "@/lib/cx";
 import Dialog from "@/components/ui/Dialog";
-import { Field, Pill, fieldClass } from "@/components/ui/controls";
-import PriceField, { Chevron } from "./PriceField";
+import { Button } from "@/components/ui/Button";
+import { Chip } from "@/components/ui/Chip";
+import { FormField, Input, Select, Textarea } from "@/components/ui/Field";
+import { Segmented } from "@/components/ui/Segmented";
+import PriceField from "./PriceField";
 import Priority from "./Priority";
 
 type Source = { kind: "remote"; url: string } | { kind: "file"; blob: Blob; preview: string };
@@ -125,7 +129,7 @@ export default function AddItem() {
     if (!url.trim()) return;
     const link = extractUrl(url);
     if (!link) {
-      setScrapeMsg("that doesn't look like a link — it should start with https://");
+      setScrapeMsg("That doesn't look like a link. It should start with https://");
       return;
     }
     const seq = ++scrapeSeq.current;
@@ -147,16 +151,16 @@ export default function AddItem() {
       if (res.currency) setCurrency(res.currency);
       if (res.imageUrl) chooseSource({ kind: "remote", url: res.imageUrl });
       if (res.shop) {
-        setScrapeMsg(`${res.shop} hides its product details from link previews — add a photo (a screenshot works). the link is kept.`);
+        setScrapeMsg(`${res.shop} hides its product details from link previews. Add a photo (a screenshot works); the link is kept.`);
         setNeedPhoto(true);
       } else if (!res.imageUrl) {
-        setScrapeMsg("couldn't get a photo from that link — add one and fill in the details. the link is kept.");
+        setScrapeMsg("Couldn't get a photo from that link. Add one and fill in the details; the link is kept.");
         setNeedPhoto(true);
       }
     } catch (e) {
       if (seq !== scrapeSeq.current) return;
       setName((n) => n || titleFromUrl(link) || "");
-      setScrapeMsg(`${(e as Error).message || "couldn't read that link"} — add a photo and the details yourself? the link is kept.`);
+      setScrapeMsg(`${(e as Error).message || "Couldn't read that link"}. Add a photo and the details yourself; the link is kept.`);
       setNeedPhoto(true);
     } finally {
       if (seq === scrapeSeq.current) setScraping(false);
@@ -166,13 +170,13 @@ export default function AddItem() {
   async function onFile(file: File | undefined) {
     if (!file) return;
     if (!file.type.startsWith("image/") || /svg/.test(file.type)) {
-      setSaveError("that isn't a photo we can use — try a jpg, png or webp");
+      setSaveError("That isn't a photo we can use. Try a JPG, PNG or WebP.");
       return;
     }
     setSaveError("");
     const blob = await downscaleImage(file);
     chooseSource({ kind: "file", blob, preview: objectUrl(blob) });
-    if (!name) setName(file.name.replace(/\.[a-z0-9]+$/i, "").replace(/[-_]+/g, " ").slice(0, 120).toLowerCase());
+    if (!name) setName(file.name.replace(/\.[a-z0-9]+$/i, "").replace(/[-_]+/g, " ").slice(0, 120));
   }
 
   async function save() {
@@ -210,11 +214,11 @@ export default function AddItem() {
         sourceType,
       });
       track("item_added", { status, sourceType, cutout: !!cutoutUrl });
-      toast(`added ${name.trim()} ✦`);
+      toast(`Added ${name.trim()}`);
       setPanel(null);
     } catch (err) {
       setSaving(false);
-      setSaveError(`couldn't save that item${err instanceof Error && err.message ? ` (${err.message})` : ""} — try again?`);
+      setSaveError(`Couldn't save that item${err instanceof Error && err.message ? ` (${err.message})` : ""}. Try again?`);
     }
   }
 
@@ -229,23 +233,27 @@ export default function AddItem() {
 
   const cutLabel: Record<CutState, string> = {
     idle: "",
-    loading: cutProgress > 0 && cutProgress < 1 ? `getting the scissors… ${Math.round(cutProgress * 100)}%` : "getting the scissors…",
-    cutting: "cutting it out…",
-    done: "cut out ✦",
-    rough: "the cutout looks rough — using the original",
-    failed: "couldn't cut this one out — using the original",
+    loading: cutProgress > 0 && cutProgress < 1 ? `Getting ready… ${Math.round(cutProgress * 100)}%` : "Getting ready…",
+    cutting: "Cutting it out…",
+    done: "Background removed",
+    rough: "The cutout looks rough, so we kept the original",
+    failed: "Couldn't cut this one out, so we kept the original",
   };
 
-  return (
-    <Dialog title="add an item" onClose={() => setPanel(null)} className="max-w-xl" labelledBy="add-title">
-      <h2 id="add-title" className="font-[family-name:var(--font-display)] text-lg lowercase">
-        add an item
-      </h2>
+  const cutting = cutState === "loading" || cutState === "cutting";
 
-      <div className="mt-3 flex gap-2" role="tablist" aria-label="how to add">
-        <Pill on={tab === "link"} onClick={() => setTab("link")}>paste a link</Pill>
-        <Pill on={tab === "photo"} onClick={() => setTab("photo")}>upload a photo</Pill>
-      </div>
+  return (
+    <Dialog title="Add an item" onClose={() => setPanel(null)} className="sm:max-w-xl">
+      <Segmented
+        label="How to add"
+        value={tab}
+        onChange={setTab}
+        options={[
+          { value: "link", label: "Paste a link" },
+          { value: "photo", label: "Upload a photo" },
+        ]}
+        className="flex w-full"
+      />
 
       {tab === "link" ? (
         <form
@@ -255,8 +263,10 @@ export default function AddItem() {
             fetchLink();
           }}
         >
-          <label htmlFor="add-url" className="sr-only">product link</label>
-          <input
+          <label htmlFor="add-url" className="sr-only">
+            Product link
+          </label>
+          <Input
             id="add-url"
             data-autofocus
             value={url}
@@ -267,167 +277,184 @@ export default function AddItem() {
             }}
             placeholder="https://…"
             inputMode="url"
-            className={`${fieldClass} flex-1 normal-case`}
+            className="flex-1"
           />
-          <button
-            type="submit"
-            disabled={scraping || !url.trim()}
-            className="rounded-lg bg-ink px-4 text-sm lowercase text-panel disabled:opacity-40"
-          >
-            {scraping ? "reading…" : "fetch"}
-          </button>
+          <Button type="submit" variant="primary" disabled={scraping || !url.trim()}>
+            {scraping ? "Reading…" : "Fetch"}
+          </Button>
         </form>
       ) : (
-        <DropZone onFile={onFile} label={source ? "choose a different photo" : "choose or drop a photo"} autoFocus />
+        <DropZone onFile={onFile} label={source ? "Choose a different photo" : "Choose or drop a photo"} autoFocus />
       )}
 
-      {scrapeMsg && <p className="mt-2 text-xs lowercase text-blush" role="status">{scrapeMsg}</p>}
-      {tab === "link" && needPhoto && <DropZone onFile={onFile} label={source ? "choose a different photo" : "add a photo"} compact />}
+      {scrapeMsg && (
+        <p className="cap-first mt-2 text-caption text-warning" role="status">
+          {scrapeMsg}
+        </p>
+      )}
+      {tab === "link" && needPhoto && <DropZone onFile={onFile} label={source ? "Choose a different photo" : "Add a photo"} compact />}
 
-      <div className="mt-4 flex flex-col gap-4 sm:flex-row">
+      <div className="mt-5 flex flex-col gap-5 sm:flex-row">
         {/* preview: the object materialises (brief §19) */}
-        <div className="flex shrink-0 flex-col items-center gap-2 self-center sm:self-start">
+        <div className="flex shrink-0 flex-col items-center gap-2 sm:w-40">
           <div
-            className={
-              "relative flex h-36 w-36 items-center justify-center overflow-hidden rounded-xl border border-rule " +
-              (cutout && useCut ? "checker" : "bg-ground/30")
-            }
+            className={cx(
+              "relative flex aspect-[4/5] w-40 items-center justify-center overflow-hidden rounded-card",
+              cutout && useCut ? "checker" : "bg-wash"
+            )}
           >
             {scraping && !source ? (
-              <div className="shimmer h-24 w-24 rounded-2xl" aria-label="reading the link" />
+              <div className="shimmer h-24 w-24 rounded-card" aria-label="Reading the link" />
             ) : source ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={previewSrc}
-                alt="preview"
-                className={
-                  "max-h-32 max-w-32 object-contain transition " +
-                  (cutState === "loading" || cutState === "cutting" ? "opacity-60 blur-[1px]" : "cutout-shadow")
-                }
+                alt="Preview of the item"
+                className={cx("max-h-[84%] max-w-[84%] object-contain transition", cutting ? "opacity-60 blur-[1px]" : "cutout-shadow")}
               />
             ) : (
-              <span className="text-xs lowercase text-ink-soft">preview</span>
+              <span className="text-caption text-ink-faint">Preview</span>
             )}
-            {(cutState === "loading" || cutState === "cutting") && <div className="scan absolute inset-0" aria-hidden />}
+            {cutting && <div className="scan absolute inset-0" aria-hidden />}
           </div>
           {source && (
-            <div className="flex flex-col items-center gap-1 text-[11px] lowercase text-ink-soft" aria-live="polite">
+            <div className="flex flex-col items-center gap-1.5 text-center text-caption text-ink-soft" aria-live="polite">
               {cutState !== "idle" && <span>{cutLabel[cutState]}</span>}
               {cutout && (
-                <div className="flex gap-1">
-                  <Pill on={useCut} onClick={() => setUseCut(true)}>cutout</Pill>
-                  <Pill on={!useCut} onClick={() => setUseCut(false)}>original</Pill>
-                </div>
+                <Segmented
+                  label="Which picture to use"
+                  value={useCut ? "cut" : "original"}
+                  onChange={(v) => setUseCut(v === "cut")}
+                  options={[
+                    { value: "cut", label: "Cutout" },
+                    { value: "original", label: "Original" },
+                  ]}
+                />
               )}
               {(cutState === "failed" || cutState === "rough" || cutState === "done") && (
                 <button onClick={() => runCutout(source)} className="underline underline-offset-4 hover:text-ink">
-                  try again
+                  Try again
                 </button>
               )}
               {cutState === "idle" && (
                 <button onClick={() => runCutout(source)} className="underline underline-offset-4 hover:text-ink">
-                  cut out the background
+                  Remove the background
                 </button>
               )}
             </div>
           )}
         </div>
 
-        <div className="flex flex-1 flex-col gap-2">
-          <Field aria-label="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="name" maxLength={120} />
-          <Field aria-label="brand" value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="brand" maxLength={80} />
-          <PriceField
-            currency={currency}
-            onCurrency={setCurrency}
-            amount={price}
-            onAmount={setPrice}
-            placeholder={status === "want" ? "current price" : "price paid"}
-          />
-          {status === "want" && (
-            <PriceField currency={currency} lockCurrency amount={target} onAmount={setTarget} placeholder="target price (alerts you)" />
-          )}
-          <div className="relative flex items-center">
-            <label htmlFor="add-section" className="sr-only">section</label>
-            <select
-              id="add-section"
-              value={sectionId}
-              onChange={(e) => setSectionId(e.target.value)}
-              className={`${fieldClass} cursor-pointer appearance-none pr-8`}
-            >
-              <option value="">unsorted</option>
+        <div className="grid flex-1 grid-cols-2 content-start gap-3">
+          <FormField label="Name" htmlFor="add-name" className="col-span-2">
+            <Input id="add-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} />
+          </FormField>
+          <FormField label="Brand" htmlFor="add-brand" className="col-span-2 sm:col-span-1">
+            <Input id="add-brand" value={brand} onChange={(e) => setBrand(e.target.value)} maxLength={80} />
+          </FormField>
+          <FormField label="Section" htmlFor="add-section" className="col-span-2 sm:col-span-1">
+            <Select id="add-section" value={sectionId} onChange={(e) => setSectionId(e.target.value)}>
+              <option value="">Unsorted</option>
               {(sections ?? []).map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
               ))}
-            </select>
-            <Chevron />
-          </div>
+            </Select>
+          </FormField>
+          <FormField
+            label={status === "want" ? "Current price" : "Price paid"}
+            htmlFor="add-price"
+            className={status === "want" ? "col-span-2 sm:col-span-1" : "col-span-2"}
+          >
+            <PriceField
+              id="add-price"
+              label={status === "want" ? "Current price" : "Price paid"}
+              currency={currency}
+              onCurrency={setCurrency}
+              amount={price}
+              onAmount={setPrice}
+            />
+          </FormField>
+          {status === "want" && (
+            <FormField label="Target price" htmlFor="add-target" className="col-span-2 sm:col-span-1">
+              <PriceField id="add-target" label="Target price" currency={currency} lockCurrency amount={target} onAmount={setTarget} />
+            </FormField>
+          )}
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-3">
-        <div className="flex gap-1.5" role="group" aria-label="status">
-          <Pill on={status === "owned"} onClick={() => setStatus("owned")}>owned</Pill>
-          <Pill on={status === "want"} onClick={() => setStatus("want")}>want</Pill>
-        </div>
-        <div className="flex flex-wrap gap-1.5" role="group" aria-label="size on the canvas">
-          {SIZE_TIERS.map((t) => (
-            <Pill key={t} on={sizeTier === t} onClick={() => setSizeTier(t)}>{t}</Pill>
-          ))}
-        </div>
+      <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <FormField label="Status">
+          <Segmented
+            label="Status"
+            value={status}
+            onChange={setStatus}
+            options={[
+              { value: "owned", label: "Owned" },
+              { value: "want", label: "Want" },
+            ]}
+            className="flex w-full"
+          />
+        </FormField>
+        <FormField label="Size in the collage">
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Size in the collage">
+            {SIZE_TIERS.map((t) => (
+              <Chip key={t} on={sizeTier === t} onClick={() => setSizeTier(t)} className="capitalize">
+                {t}
+              </Chip>
+            ))}
+          </div>
+        </FormField>
       </div>
 
       {status === "owned" ? (
-        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto]">
-          <Field aria-label="where bought" value={boughtAt} onChange={(e) => setBoughtAt(e.target.value)} placeholder="where bought (optional)" maxLength={120} />
-          <input
-            type="date"
-            aria-label="purchase date"
-            value={purchasedAt}
-            max={new Date().toISOString().slice(0, 10)}
-            onChange={(e) => setPurchasedAt(e.target.value)}
-            className={`${fieldClass} sm:w-40`}
-          />
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_11rem]">
+          <FormField label="Where you bought it" htmlFor="add-bought">
+            <Input id="add-bought" value={boughtAt} onChange={(e) => setBoughtAt(e.target.value)} placeholder="Optional" maxLength={120} />
+          </FormField>
+          <FormField label="Purchase date" htmlFor="add-date">
+            <Input
+              id="add-date"
+              type="date"
+              value={purchasedAt}
+              max={new Date().toISOString().slice(0, 10)}
+              onChange={(e) => setPurchasedAt(e.target.value)}
+            />
+          </FormField>
         </div>
       ) : (
-        <div className="mt-3 flex items-center gap-3 text-xs lowercase text-ink-soft">
-          how much do you want it? <Priority value={priority} onChange={setPriority} />
-        </div>
+        <FormField label="How much you want it" className="mt-4">
+          <Priority value={priority} onChange={setPriority} />
+        </FormField>
       )}
 
       {showNotes ? (
-        <textarea
-          aria-label="notes"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={2}
-          maxLength={2000}
-          placeholder="a note…"
-          className={`${fieldClass} mt-3 resize-none`}
-        />
+        <FormField label="Note" htmlFor="add-notes" className="mt-4">
+          <Textarea id="add-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} maxLength={2000} />
+        </FormField>
       ) : (
-        <button onClick={() => setShowNotes(true)} className="mt-3 text-xs lowercase text-ink-soft underline underline-offset-4">
-          + add a note
+        <button onClick={() => setShowNotes(true)} className="mt-4 text-caption text-ink-soft underline underline-offset-4 hover:text-ink">
+          Add a note
         </button>
       )}
 
-      {saveError && <p className="mt-4 text-right text-xs lowercase text-blush" role="alert">{saveError}</p>}
+      {saveError && (
+        <p className="cap-first mt-4 text-caption text-danger" role="alert">
+          {saveError}
+        </p>
+      )}
 
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-        <label className="flex cursor-pointer items-center gap-2 text-[11px] lowercase text-ink-soft">
-          <input type="checkbox" checked={autoCut} onChange={toggleAutoCut} className="accent-current" />
-          cut out backgrounds automatically
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <label className="flex cursor-pointer items-center gap-2 text-caption text-ink-soft">
+          <input type="checkbox" checked={autoCut} onChange={toggleAutoCut} className="h-4 w-4 accent-[var(--ink)]" />
+          Remove backgrounds automatically
         </label>
         <div className="flex gap-2">
-          <button onClick={() => setPanel(null)} className="rounded-lg border border-rule px-4 py-2 text-sm lowercase">
-            cancel
-          </button>
-          <button
-            onClick={save}
-            disabled={saving || !source || !name.trim() || cutState === "loading" || cutState === "cutting"}
-            className="rounded-lg bg-ink px-5 py-2 text-sm lowercase text-panel disabled:opacity-40"
-          >
-            {saving ? "adding…" : "add ✦"}
-          </button>
+          <Button onClick={() => setPanel(null)}>Cancel</Button>
+          <Button variant="primary" onClick={save} disabled={saving || !source || !name.trim() || cutting}>
+            {saving ? "Adding…" : "Add item"}
+          </Button>
         </div>
       </div>
     </Dialog>
@@ -458,11 +485,11 @@ function DropZone({
         setOver(false);
         onFile(e.dataTransfer.files?.[0]);
       }}
-      className={
-        "mt-3 flex cursor-pointer items-center justify-center rounded-lg border border-dashed bg-ground/30 text-sm lowercase text-ink-soft transition focus-within:border-ink hover:border-ink " +
-        (compact ? "py-4 " : "py-7 ") +
-        (over ? "border-ink bg-ground/50" : "border-rule")
-      }
+      className={cx(
+        "mt-3 flex cursor-pointer items-center justify-center rounded-control border border-dashed bg-wash text-ink-soft transition focus-within:border-ink hover:border-ink",
+        compact ? "py-4" : "py-8",
+        over ? "border-ink" : "border-rule-strong"
+      )}
     >
       {label}
       <input

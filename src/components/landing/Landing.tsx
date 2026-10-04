@@ -88,7 +88,7 @@ export default function Landing() {
         >
           <button
             onClick={scrollToEnter}
-            className="rounded-xl bg-ink px-7 py-3.5 text-[15px] lowercase text-panel shadow-[0_14px_34px_var(--shadow)] transition hover:-translate-y-0.5 hover:opacity-90"
+            className="rounded-xl bg-ink px-7 py-3.5 text-[15px] lowercase text-panel shadow-card transition hover:-translate-y-0.5 hover:opacity-90"
           >
             open your wardrobe ✦
           </button>
@@ -122,7 +122,7 @@ export default function Landing() {
           />
 
           {/* desktop / tablet: browser window */}
-          <div className="mx-auto hidden max-w-5xl overflow-hidden rounded-2xl border border-rule bg-panel shadow-[0_40px_90px_-20px_var(--shadow)] sm:block">
+          <div className="mx-auto hidden max-w-5xl overflow-hidden rounded-2xl border border-rule bg-panel shadow-overlay sm:block">
             <div className="flex items-center gap-3 border-b border-rule px-4 py-2.5">
               <div className="flex gap-1.5" aria-hidden>
                 <span className="h-2.5 w-2.5 rounded-full bg-ink/15" />
@@ -146,7 +146,7 @@ export default function Landing() {
           </div>
 
           {/* phones: the studio as it looks on a phone */}
-          <div className="mx-auto w-[260px] overflow-hidden rounded-[36px] border-[6px] border-ink bg-ink shadow-[0_30px_70px_-16px_var(--shadow)] sm:hidden">
+          <div className="mx-auto w-[260px] overflow-hidden rounded-[36px] border-[6px] border-ink bg-ink shadow-overlay sm:hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/landing/studio-mobile.webp"
@@ -174,7 +174,7 @@ export default function Landing() {
               key={s.n}
               {...fadeUp}
               transition={{ ...fadeUp.transition, delay: i * 0.06 }}
-              className="group relative overflow-hidden rounded-2xl border border-rule bg-panel/70 p-6 backdrop-blur transition hover:-translate-y-1 hover:shadow-[0_18px_40px_var(--shadow)]"
+              className="group relative overflow-hidden rounded-2xl border border-rule bg-panel/70 p-6 backdrop-blur transition hover:-translate-y-1 hover:shadow-overlay"
             >
               <span className="font-[family-name:var(--font-display)] text-xs tabular text-ink-soft">
                 {s.n}
@@ -244,7 +244,7 @@ export default function Landing() {
           ].map((g) => (
             <div key={g.name} className="flex flex-col items-center gap-2">
               <div
-                className="h-20 w-20 rounded-2xl border border-rule shadow-[0_10px_24px_var(--shadow)] transition hover:-translate-y-1"
+                className="h-20 w-20 rounded-2xl border border-rule shadow-card transition hover:-translate-y-1"
                 style={{ background: g.c }}
               />
               <span className="text-xs lowercase text-ink-soft">{g.name}</span>
@@ -311,7 +311,7 @@ function Feature({
   return (
     <motion.div
       {...fadeUp}
-      className="relative overflow-hidden rounded-2xl border border-rule bg-panel/70 p-7 backdrop-blur transition hover:-translate-y-1 hover:shadow-[0_18px_40px_var(--shadow)]"
+      className="relative overflow-hidden rounded-2xl border border-rule bg-panel/70 p-7 backdrop-blur transition hover:-translate-y-1 hover:shadow-overlay"
     >
       <span
         aria-hidden

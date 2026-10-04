@@ -1,25 +1,23 @@
 "use client";
+import { Plus } from "lucide-react";
 import { useStore } from "@/lib/store";
+import { Button } from "@/components/ui/Button";
 
 export default function EmptyState() {
   const setPanel = useStore((s) => s.setPanel);
-  const title = useStore((s) => s.payload?.wardrobe.title);
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-4 px-6 text-center">
-      <pre aria-hidden className="text-sm leading-tight text-ink-soft">
-        {"  ___\n /   \\\n|  ✦  |\n \\___/"}
-      </pre>
-      <div className="font-[family-name:var(--font-display)] text-2xl lowercase">nothing here yet.</div>
-      <p className="max-w-xs text-sm lowercase text-ink-soft">
-        paste a link to begin — the cutout drops into {title ?? "your wardrobe"} and floats.
+    <div className="flex h-full w-full flex-col items-center justify-center gap-3 px-6 text-center">
+      <h2 className="font-display text-heading">Nothing here yet</h2>
+      <p className="max-w-xs text-ink-soft">
+        Paste a product link or add a photo. We cut out the background and place it here.
       </p>
-      <button
-        onClick={() => setPanel("add")}
-        className="rounded-xl bg-ink px-5 py-3 text-[15px] lowercase text-panel transition hover:opacity-90"
-      >
-        add an item ✦
-      </button>
-      <p className="text-[11px] lowercase text-ink-soft/80">tip: press n anywhere to add</p>
+      <Button variant="primary" size="lg" className="mt-2" onClick={() => setPanel("add")}>
+        <Plus aria-hidden className="h-4 w-4" /> Add an item
+      </Button>
+      {/* a keyboard shortcut is no use on a touch screen */}
+      <p className="hidden text-caption text-ink-faint [@media(hover:hover)]:block">
+        Or press <kbd className="rounded border border-rule-strong px-1 font-mono text-label">N</kbd> anywhere.
+      </p>
     </div>
   );
 }

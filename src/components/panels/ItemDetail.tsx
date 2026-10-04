@@ -9,9 +9,15 @@ import { extractHue } from "@/lib/color";
 import { cutOut, cutoutLooksGood } from "@/lib/cutout";
 import { useDebounced } from "@/lib/hooks";
 import type { Item, ItemStatus, PricePoint, SizeTier } from "@/lib/types";
+import { ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { cx } from "@/lib/cx";
 import Dialog from "@/components/ui/Dialog";
-import { Pill, Toggle, fieldClass } from "@/components/ui/controls";
-import PriceField, { Chevron } from "./PriceField";
+import { Button, IconButton } from "@/components/ui/Button";
+import { Chip } from "@/components/ui/Chip";
+import { FormField, Input, Select, Textarea } from "@/components/ui/Field";
+import { Segmented } from "@/components/ui/Segmented";
+import { Switch } from "@/components/ui/Switch";
+import PriceField from "./PriceField";
 import Priority from "./Priority";
 import Sparkline from "./Sparkline";
 
@@ -24,6 +30,7 @@ export default function ItemDetail() {
   const sections = useStore((s) => s.payload?.sections);
   const wardrobes = useStore((s) => s.payload?.wardrobes);
   const wardrobeId = useStore((s) => s.payload?.wardrobe.id);
+  const theme = useStore((s) => s.payload?.wardrobe.theme);
   const updateItem = useStore((s) => s.updateItem);
   const replaceItem = useStore((s) => s.replaceItem);
   const deleteItem = useStore((s) => s.deleteItem);
@@ -79,12 +86,12 @@ export default function ItemDetail() {
     try {
       const blob = await imageBlob(item!.imageUrl);
       const out = await cutOut(blob);
-      if (!(await cutoutLooksGood(out))) toast("that cutout came out rough — kept it anyway, use the original if you prefer");
+      if (!(await cutoutLooksGood(out))) toast("That cutout came out rough. We kept it; use the original if you prefer.");
       const url = await uploadImage(out, "cutout");
       const hue = await extractHue(URL.createObjectURL(out)).catch(() => item!.hue);
       await updateItem(item!.id, { cutoutUrl: url, hue });
     } catch (e) {
-      toast(`couldn't cut that out — ${(e as Error).message}`, { tone: "error" });
+      toast(`Couldn't cut that out: ${(e as Error).message}`, { tone: "error" });
     }
     setBusy("");
   }
@@ -95,7 +102,7 @@ export default function ItemDetail() {
     try {
       const url = await uploadImage(await downscaleImage(file), "original");
       await updateItem(item!.id, { imageUrl: url, cutoutUrl: null });
-      toast("photo replaced — cut it out when you like");
+      toast("Photo replaced. Remove its background when you like.");
     } catch (e) {
       toast((e as Error).message, { tone: "error" });
     }
@@ -109,12 +116,12 @@ export default function ItemDetail() {
       replaceItem(r.item);
       toast(
         r.found
-          ? `now ${formatMoney(r.item.price, r.item.currency)}${
-              r.converted ? ` (page says ${formatMoney(r.converted.price, r.converted.currency)})` : ""
+          ? `Now ${formatMoney(r.item.price, r.item.currency)}${
+              r.converted ? ` (the page says ${formatMoney(r.converted.price, r.converted.currency)})` : ""
             }`
           : r.unconvertible
-            ? "that page quotes another currency we can't convert right now — try again later"
-            : "couldn't find a price on that page"
+            ? "That page quotes a currency we can't convert right now. Try again later."
+            : "Couldn't find a price on that page"
       );
     } catch (e) {
       toast((e as Error).message, { tone: "error" });
@@ -142,9 +149,9 @@ export default function ItemDetail() {
       replaceItem(saved);
       const sw = saved.currencySwitch;
       if (sw && !relabel && !sw.converted) {
-        toast("couldn't get today's rates — kept the numbers and just changed the label", { tone: "error" });
+        toast("Couldn't get today's rates, so the numbers stayed and only the currency changed", { tone: "error" });
       } else if (sw?.converted) {
-        toast(`converted to ${sw.to.toLowerCase()} at today's rate`);
+        toast(`Converted to ${sw.to} at today's rate`);
       }
     } catch (e) {
       toast((e as Error).message, { tone: "error" });
@@ -154,10 +161,26 @@ export default function ItemDetail() {
   const money = (v?: number | null) => formatMoney(v, item.currency);
   const atTarget = item.targetPrice != null && item.price != null && item.price <= item.targetPrice;
 
+  const pager = items && items.length > 1 && (
+    <div className="flex items-center gap-1">
+      <IconButton label="Previous item" size="sm" onClick={() => step(-1)}>
+        <ChevronLeft aria-hidden className="h-4 w-4" />
+      </IconButton>
+      <span className="label-caps tabular px-1 text-ink-soft">
+        {idx + 1} / {items.length}
+      </span>
+      <IconButton label="Next item" size="sm" onClick={() => step(1)}>
+        <ChevronRight aria-hidden className="h-4 w-4" />
+      </IconButton>
+    </div>
+  );
+
+  const link = "underline underline-offset-4 hover:text-ink disabled:opacity-40";
+
   return (
-    <Dialog title={item.name} onClose={() => select(null)} className="max-w-2xl">
+    <Dialog title={item.name} heading={pager || undefined} onClose={() => select(null)} className="sm:max-w-2xl">
       <div
-        className="grid grid-cols-1 gap-5 sm:grid-cols-[220px_1fr]"
+        className="grid grid-cols-1 gap-6 sm:grid-cols-[15rem_1fr]"
         onKeyDown={(e) => {
           const t = e.target as HTMLElement;
           if (/input|textarea|select/i.test(t.tagName)) return;
@@ -165,30 +188,33 @@ export default function ItemDetail() {
           if (e.key === "ArrowLeft") step(-1);
         }}
       >
-        <div className="flex flex-col gap-2">
-          <div className={"flex items-center justify-center rounded-xl p-4 " + (item.cutoutUrl ? "checker" : "bg-ground/30")}>
+        <div className="mx-auto flex w-full max-w-[15rem] flex-col gap-2">
+          {/* the item on its wardrobe's own ground */}
+          <div
+            data-theme={theme}
+            className="ground-field flex aspect-[4/5] items-center justify-center overflow-hidden rounded-card"
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={proxiedSrc(item.cutoutUrl || item.imageUrl)}
               alt={item.name}
-              className={"max-h-52 max-w-full object-contain cutout-shadow " + (busy === "cut" ? "opacity-50" : "")}
+              className={cx(
+                item.cutoutUrl ? "cutout-shadow max-h-[84%] max-w-[84%] object-contain" : "h-full w-full object-cover",
+                busy === "cut" && "opacity-50"
+              )}
             />
           </div>
-          <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-[11px] lowercase text-ink-soft">
-            <button disabled={!!busy} onClick={recut} className="underline underline-offset-4 hover:text-ink disabled:opacity-40">
-              {busy === "cut" ? "cutting…" : item.cutoutUrl ? "re-cut" : "cut out background"}
+          <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-caption text-ink-soft">
+            <button disabled={!!busy} onClick={recut} className={link}>
+              {busy === "cut" ? "Cutting…" : item.cutoutUrl ? "Re-cut" : "Remove background"}
             </button>
             {item.cutoutUrl && (
-              <button
-                disabled={!!busy}
-                onClick={() => updateItem(item.id, { cutoutUrl: null })}
-                className="underline underline-offset-4 hover:text-ink disabled:opacity-40"
-              >
-                use original
+              <button disabled={!!busy} onClick={() => updateItem(item.id, { cutoutUrl: null })} className={link}>
+                Use original
               </button>
             )}
-            <label className="cursor-pointer underline underline-offset-4 hover:text-ink">
-              {busy === "photo" ? "uploading…" : "replace photo"}
+            <label className={cx(link, "cursor-pointer")}>
+              {busy === "photo" ? "Uploading…" : "Replace photo"}
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
@@ -197,201 +223,185 @@ export default function ItemDetail() {
               />
             </label>
           </div>
-          {items && items.length > 1 && (
-            <div className="flex justify-center gap-2 text-xs text-ink-soft">
-              <button onClick={() => step(-1)} aria-label="previous item" className="rounded px-2 hover:text-ink">←</button>
-              <span className="tabular">{idx + 1} / {items.length}</span>
-              <button onClick={() => step(1)} aria-label="next item" className="rounded px-2 hover:text-ink">→</button>
-            </div>
-          )}
         </div>
 
-        <div className="flex min-w-0 flex-col gap-3">
+        <div className="flex min-w-0 flex-col gap-4">
           <input
-            aria-label="name"
+            aria-label="Name"
             value={draft.name}
             maxLength={120}
             onChange={(e) => edit("name", e.target.value)}
             onBlur={() => !draft.name.trim() && setDraft({ ...draft, name: item.name })}
-            className="w-full rounded bg-transparent py-1 font-[family-name:var(--font-display)] text-xl lowercase outline-none focus:bg-ground/30"
+            className="-mx-1.5 w-[calc(100%+0.75rem)] rounded-md bg-transparent px-1.5 py-0.5 font-display text-heading hover:bg-wash focus:bg-wash"
           />
 
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <input
-              aria-label="brand"
-              value={draft.brand ?? ""}
-              maxLength={80}
-              onChange={(e) => edit("brand", e.target.value)}
-              placeholder="brand"
-              className={fieldClass}
-            />
-            <PriceField
-              size="sm"
-              currency={item.currency}
-              onCurrency={(v) => changeCurrency(v)}
-              amount={item.price != null ? String(item.price) : ""}
-              onAmount={(v) => updateItem(item.id, { price: v ? Number(v) : null })}
-              placeholder={item.status === "want" ? "current price" : "price paid"}
-            />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <FormField label="Brand" htmlFor="detail-brand">
+              <Input id="detail-brand" value={draft.brand ?? ""} maxLength={80} onChange={(e) => edit("brand", e.target.value)} />
+            </FormField>
+            <FormField label={item.status === "want" ? "Current price" : "Price paid"} htmlFor="detail-price">
+              <PriceField
+                id="detail-price"
+                label={item.status === "want" ? "Current price" : "Price paid"}
+                currency={item.currency}
+                onCurrency={(v) => changeCurrency(v)}
+                amount={item.price != null ? String(item.price) : ""}
+                onAmount={(v) => updateItem(item.id, { price: v ? Number(v) : null })}
+              />
+            </FormField>
           </div>
 
           {pendingCurrency && (
-            <div className="rounded-lg border border-rule bg-ground/20 p-3 text-xs lowercase" role="group" aria-label="currency change">
+            <div className="rounded-card border border-rule bg-wash p-3 text-caption" role="group" aria-label="Currency change">
               <p>
-                is {money(item.price ?? item.targetPrice)} the price in {pendingCurrency.toLowerCase()}, or should it be
-                converted?
+                Is {money(item.price ?? item.targetPrice)} already the price in {pendingCurrency}, or should it be converted?
               </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <button onClick={() => applyCurrency(false)} className="rounded-lg bg-ink px-3 py-1.5 text-xs lowercase text-panel">
-                  convert to {pendingCurrency.toLowerCase()}
-                </button>
-                <button onClick={() => applyCurrency(true)} className="rounded-lg border border-rule px-3 py-1.5 text-xs lowercase">
-                  it&apos;s already {pendingCurrency.toLowerCase()}
-                </button>
-                <button onClick={() => setPendingCurrency(null)} className="px-2 py-1.5 text-xs lowercase text-ink-soft underline underline-offset-4">
-                  cancel
-                </button>
+              <div className="mt-2.5 flex flex-wrap gap-2">
+                <Button size="sm" variant="primary" onClick={() => applyCurrency(false)}>
+                  Convert to {pendingCurrency}
+                </Button>
+                <Button size="sm" onClick={() => applyCurrency(true)}>
+                  It&apos;s already {pendingCurrency}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setPendingCurrency(null)}>
+                  Cancel
+                </Button>
               </div>
             </div>
           )}
 
-          <div className="flex flex-wrap items-center gap-2">
-            {(["owned", "want"] as ItemStatus[]).map((st) => (
-              <Pill key={st} on={item.status === st} onClick={() => updateItem(item.id, { status: st })}>
-                {st}
-              </Pill>
-            ))}
-            <div className="relative flex items-center">
-              <label htmlFor="detail-section" className="sr-only">section</label>
-              <select
-                id="detail-section"
-                value={item.sectionId ?? ""}
-                onChange={(e) => updateItem(item.id, { sectionId: e.target.value || null })}
-                className="cursor-pointer appearance-none rounded-full border border-rule bg-ground/40 py-1 pl-3 pr-7 text-base lowercase outline-none focus-visible:border-ink sm:text-xs"
-              >
-                <option value="">unsorted</option>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <FormField label="Status">
+              <Segmented
+                label="Status"
+                value={item.status}
+                onChange={(st: ItemStatus) => updateItem(item.id, { status: st })}
+                options={[
+                  { value: "owned", label: "Owned" },
+                  { value: "want", label: "Want" },
+                ]}
+                className="flex w-full"
+              />
+            </FormField>
+            <FormField label="Section" htmlFor="detail-section">
+              <Select id="detail-section" value={item.sectionId ?? ""} onChange={(e) => updateItem(item.id, { sectionId: e.target.value || null })}>
+                <option value="">Unsorted</option>
                 {(sections ?? []).map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
                 ))}
-              </select>
-              <Chevron />
-            </div>
+              </Select>
+            </FormField>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs lowercase text-ink-soft">size</span>
-            {SIZE_TIERS.map((t) => (
-              <Pill key={t} on={item.sizeTier === t} onClick={() => updateItem(item.id, { sizeTier: t as SizeTier })}>
-                {t}
-              </Pill>
-            ))}
-          </div>
+          <FormField label="Size in the collage">
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Size in the collage">
+              {SIZE_TIERS.map((t) => (
+                <Chip key={t} on={item.sizeTier === t} onClick={() => updateItem(item.id, { sizeTier: t as SizeTier })} className="capitalize">
+                  {t}
+                </Chip>
+              ))}
+            </div>
+          </FormField>
 
           {item.status === "owned" ? (
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto]">
-              <input
-                aria-label="where bought"
-                value={draft.boughtAt ?? ""}
-                maxLength={120}
-                onChange={(e) => edit("boughtAt", e.target.value)}
-                placeholder="where bought"
-                className={fieldClass}
-              />
-              <input
-                type="date"
-                aria-label="purchase date"
-                value={item.purchasedAt?.slice(0, 10) ?? ""}
-                max={new Date().toISOString().slice(0, 10)}
-                onChange={(e) => updateItem(item.id, { purchasedAt: e.target.value || null })}
-                className={`${fieldClass} sm:w-40`}
-              />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_11rem]">
+              <FormField label="Where you bought it" htmlFor="detail-bought">
+                <Input id="detail-bought" value={draft.boughtAt ?? ""} maxLength={120} onChange={(e) => edit("boughtAt", e.target.value)} />
+              </FormField>
+              <FormField label="Purchase date" htmlFor="detail-date">
+                <Input
+                  id="detail-date"
+                  type="date"
+                  value={item.purchasedAt?.slice(0, 10) ?? ""}
+                  max={new Date().toISOString().slice(0, 10)}
+                  onChange={(e) => updateItem(item.id, { purchasedAt: e.target.value || null })}
+                />
+              </FormField>
             </div>
           ) : (
-            <div className="space-y-2 rounded-xl border border-rule bg-ground/20 p-3">
-              <PriceField
-                size="sm"
-                currency={item.currency}
-                lockCurrency
-                amount={item.targetPrice != null ? String(item.targetPrice) : ""}
-                onAmount={(v) => updateItem(item.id, { targetPrice: v ? Number(v) : null })}
-                placeholder="target price"
-              />
-              <div className="flex items-center gap-2 text-xs lowercase text-ink-soft">
-                priority <Priority value={item.priority} onChange={(v) => updateItem(item.id, { priority: v })} />
+            <div className="space-y-3 rounded-card border border-rule bg-wash p-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <FormField label="Target price" htmlFor="detail-target">
+                  <PriceField
+                    id="detail-target"
+                    label="Target price"
+                    currency={item.currency}
+                    lockCurrency
+                    amount={item.targetPrice != null ? String(item.targetPrice) : ""}
+                    onAmount={(v) => updateItem(item.id, { targetPrice: v ? Number(v) : null })}
+                  />
+                </FormField>
+                <FormField label="Priority">
+                  <Priority value={item.priority} onChange={(v) => updateItem(item.id, { priority: v })} />
+                </FormField>
               </div>
               {item.sourceUrl ? (
                 <>
                   {history && history.length > 1 && (
                     <Sparkline points={history.map((h) => h.price)} target={item.targetPrice ?? undefined} />
                   )}
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] lowercase text-ink-soft">
-                    {atTarget && <span className="accent-pin rounded-full px-1.5">◎ at your target</span>}
-                    {item.lowestPrice != null && <span>lowest seen {money(item.lowestPrice)}</span>}
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-ink-soft">
+                    {atTarget && <span className="accent-pin label-caps rounded-full px-2 py-0.5">At your target</span>}
+                    {item.lowestPrice != null && (
+                      <span>
+                        Lowest seen <span className="price">{money(item.lowestPrice)}</span>
+                      </span>
+                    )}
                     <span>
                       {item.lastCheckedAt
-                        ? `checked ${new Date(item.lastCheckedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
-                        : "not checked yet"}
+                        ? `Checked ${new Date(item.lastCheckedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
+                        : "Not checked yet"}
                     </span>
-                    <button disabled={!!busy} onClick={checkNow} className="underline underline-offset-4 hover:text-ink disabled:opacity-40">
-                      {busy === "check" ? "checking…" : "check now"}
+                    <button disabled={!!busy} onClick={checkNow} className={link}>
+                      {busy === "check" ? "Checking…" : "Check now"}
                     </button>
                   </div>
-                  <Toggle
+                  <Switch
                     on={item.priceAlert !== false}
                     onChange={(v) => updateItem(item.id, { priceAlert: v })}
-                    label="tell me when the price drops"
+                    label="Tell me when the price drops"
                   />
                 </>
               ) : (
-                <p className="text-[11px] lowercase text-ink-soft">add the product link below to track its price.</p>
+                <p className="text-caption text-ink-soft">Add the product link below to track its price.</p>
               )}
             </div>
           )}
 
-          <textarea
-            aria-label="notes"
-            value={draft.notes ?? ""}
-            maxLength={2000}
-            onChange={(e) => edit("notes", e.target.value)}
-            placeholder="notes…"
-            rows={2}
-            className={`${fieldClass} resize-none`}
-          />
+          <FormField label="Notes" htmlFor="detail-notes">
+            <Textarea id="detail-notes" value={draft.notes ?? ""} maxLength={2000} onChange={(e) => edit("notes", e.target.value)} rows={2} />
+          </FormField>
 
-          <input
-            aria-label="product link"
-            value={draft.sourceUrl ?? ""}
-            maxLength={4000}
-            inputMode="url"
-            onChange={(e) => {
-              const v = e.target.value.trim();
-              setDraft({ ...draft, sourceUrl: v });
-              if (!v || /^https?:\/\/\S+\.\S+/.test(v)) save(item.id, { sourceUrl: v || null });
-            }}
-            placeholder="product link (optional)"
-            className={`${fieldClass} normal-case`}
-          />
+          <FormField label="Product link" htmlFor="detail-link">
+            <Input
+              id="detail-link"
+              value={draft.sourceUrl ?? ""}
+              maxLength={4000}
+              inputMode="url"
+              onChange={(e) => {
+                const v = e.target.value.trim();
+                setDraft({ ...draft, sourceUrl: v });
+                if (!v || /^https?:\/\/\S+\.\S+/.test(v)) save(item.id, { sourceUrl: v || null });
+              }}
+              placeholder="Optional"
+            />
+          </FormField>
 
           {wardrobes && wardrobes.length > 1 && (
-            <div className="relative flex items-center">
-              <label htmlFor="detail-move" className="sr-only">move to another wardrobe</label>
-              <select
-                id="detail-move"
-                value=""
-                onChange={(e) => e.target.value && moveItemToWardrobe(item.id, e.target.value)}
-                className="w-full cursor-pointer appearance-none rounded-lg border border-rule bg-ground/40 py-1.5 pl-3 pr-8 text-base lowercase outline-none focus-visible:border-ink sm:text-xs"
-              >
-                <option value="">move to another wardrobe…</option>
+            <FormField label="Move to another wardrobe" htmlFor="detail-move">
+              <Select id="detail-move" value="" onChange={(e) => e.target.value && moveItemToWardrobe(item.id, e.target.value)}>
+                <option value="">Choose a wardrobe…</option>
                 {wardrobes
                   .filter((w) => w.id !== wardrobeId)
                   .map((w) => (
                     <option key={w.id} value={w.id}>
-                      {w.icon ?? "✦"} {w.title}
+                      {w.title}
                     </option>
                   ))}
-              </select>
-              <Chevron />
-            </div>
+              </Select>
+            </FormField>
           )}
 
           <div className="mt-1 flex items-center justify-between gap-2">
@@ -400,24 +410,16 @@ export default function ItemDetail() {
                 href={item.sourceUrl}
                 target="_blank"
                 rel="noreferrer noopener"
-                className="text-xs lowercase text-ink-soft underline underline-offset-4"
+                className="inline-flex items-center gap-1 text-caption font-medium underline underline-offset-4"
               >
-                open link ↗
+                Open link <ArrowUpRight aria-hidden className="h-3.5 w-3.5" />
               </a>
             ) : (
               <span />
             )}
-            <div className="flex gap-2">
-              <button
-                onClick={() => deleteItem(item.id)}
-                className="rounded-lg border border-rule px-3 py-1.5 text-xs lowercase hover:text-blush"
-              >
-                remove
-              </button>
-              <button onClick={() => select(null)} className="rounded-lg bg-ink px-4 py-1.5 text-xs lowercase text-panel">
-                done
-              </button>
-            </div>
+            <Button size="sm" className="text-danger" onClick={() => deleteItem(item.id)}>
+              Remove item
+            </Button>
           </div>
         </div>
       </div>

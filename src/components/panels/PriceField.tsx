@@ -1,48 +1,48 @@
 "use client";
+import { ChevronDown } from "lucide-react";
 import { CURRENCIES, DEFAULT_CURRENCY, currencySymbol, isPresetCurrency } from "@/lib/currency";
+import { cx } from "@/lib/cx";
 
 // One bordered field: [₦ NGN ▾ | amount].
 // `lockCurrency` shows the symbol as a fixed prefix (e.g. for target price).
 export default function PriceField({
+  id,
+  label,
   currency,
   onCurrency,
   amount,
   onAmount,
-  placeholder = "price",
-  size = "md",
   lockCurrency = false,
-  className = "",
+  className,
 }: {
+  id?: string;
+  /** names the amount for screen readers */
+  label: string;
   currency: string | null | undefined;
   onCurrency?: (v: string) => void;
   amount: string;
   onAmount: (v: string) => void;
-  placeholder?: string;
-  size?: "sm" | "md";
   lockCurrency?: boolean;
   className?: string;
 }) {
   const current = currency || DEFAULT_CURRENCY;
-  const py = size === "sm" ? "py-1.5" : "py-2";
 
   return (
     <div
-      className={
-        "flex min-w-0 items-stretch overflow-hidden rounded-lg border border-rule bg-ground/40 text-base focus-within:border-ink sm:text-sm " +
+      className={cx(
+        "flex h-10 min-w-0 items-stretch overflow-hidden rounded-control border border-rule-strong bg-panel text-base transition-colors focus-within:border-ink focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ink hover:border-ink/60 sm:text-sm",
         className
-      }
+      )}
     >
       {lockCurrency || !onCurrency ? (
-        <span className={`flex items-center border-r border-rule px-3 ${py} text-ink-soft`}>
-          {currencySymbol(currency)}
-        </span>
+        <span className="flex items-center border-r border-rule px-3 font-mono text-ink-soft">{currencySymbol(currency)}</span>
       ) : (
         <div className="relative flex shrink-0 items-center border-r border-rule">
           <select
-            aria-label="currency"
+            aria-label="Currency"
             value={current}
             onChange={(e) => onCurrency(e.target.value)}
-            className={`h-full cursor-pointer appearance-none bg-transparent pl-3 pr-7 ${py} outline-none focus-visible:bg-ink/5`}
+            className="h-full cursor-pointer appearance-none bg-transparent pl-3 pr-7 font-mono outline-none focus-visible:bg-ink/6"
           >
             {CURRENCIES.map((c) => (
               <option key={c.code} value={c.code}>
@@ -57,37 +57,21 @@ export default function PriceField({
               </option>
             )}
           </select>
-          <Chevron />
+          <ChevronDown aria-hidden className="pointer-events-none absolute right-2 h-3.5 w-3.5 text-ink-soft" />
         </div>
       )}
       <input
+        id={id}
         type="number"
         inputMode="decimal"
         min={0}
         step="any"
         value={amount}
         onChange={(e) => onAmount(e.target.value)}
-        placeholder={placeholder}
-        aria-label={placeholder}
-        className={`w-full min-w-0 flex-1 bg-transparent px-3 ${py} lowercase outline-none placeholder:text-ink-soft/60`}
+        placeholder="0"
+        aria-label={label}
+        className="price w-full min-w-0 flex-1 bg-transparent px-3 outline-none placeholder:text-ink-faint"
       />
     </div>
-  );
-}
-
-export function Chevron() {
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 12 12"
-      className="pointer-events-none absolute right-2.5 h-3 w-3 text-ink-soft"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 4.5 6 7.5 9 4.5" />
-    </svg>
   );
 }
