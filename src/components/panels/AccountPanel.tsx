@@ -5,8 +5,10 @@ import { startRegistration } from "@simplewebauthn/browser";
 import { useStore } from "@/lib/store";
 import { api } from "@/lib/api";
 import { CURRENCIES } from "@/lib/currency";
+import { RefreshCw } from "lucide-react";
 import Dialog from "@/components/ui/Dialog";
-import { Field, Group, PrimaryButton, QuietButton } from "@/components/ui/controls";
+import { Button, IconButton, buttonClass } from "@/components/ui/Button";
+import { FormField, Input, Select } from "@/components/ui/Field";
 import type { StudioUser } from "@/app/studio/Studio";
 
 type Me = {
@@ -20,9 +22,9 @@ type Passkey = { id: string; deviceLabel: string | null; createdAt: string };
 type SessionRow = { id: string; userAgent: string | null; lastSeenAt: string; current: boolean };
 
 function deviceName(ua: string | null) {
-  if (!ua) return "unknown device";
-  const os = /iphone|ipad/i.test(ua) ? "iphone" : /android/i.test(ua) ? "android" : /mac os/i.test(ua) ? "mac" : /windows/i.test(ua) ? "windows" : /linux/i.test(ua) ? "linux" : "device";
-  const browser = /edg\//i.test(ua) ? "edge" : /chrome|crios/i.test(ua) ? "chrome" : /firefox|fxios/i.test(ua) ? "firefox" : /safari/i.test(ua) ? "safari" : "browser";
+  if (!ua) return "Unknown device";
+  const os = /iphone|ipad/i.test(ua) ? "iPhone" : /android/i.test(ua) ? "Android" : /mac os/i.test(ua) ? "Mac" : /windows/i.test(ua) ? "Windows" : /linux/i.test(ua) ? "Linux" : "a device";
+  const browser = /edg\//i.test(ua) ? "Edge" : /chrome|crios/i.test(ua) ? "Chrome" : /firefox|fxios/i.test(ua) ? "Firefox" : /safari/i.test(ua) ? "Safari" : "A browser";
   return `${browser} on ${os}`;
 }
 
@@ -76,7 +78,7 @@ export default function AccountPanel({ user }: { user: StudioUser }) {
       const options = await api.post("/api/auth/passkey/register/options");
       const att = await startRegistration({ optionsJSON: options });
       await api.post("/api/auth/passkey/register/verify", { ...att, deviceLabel: deviceName(navigator.userAgent) });
-      toast("passkey added ✦ — you can unlock with it next time");
+      toast("Passkey added. You can sign in with it next time.");
       load();
     } catch (e) {
       const msg = (e as Error).message;
@@ -96,96 +98,108 @@ export default function AccountPanel({ user }: { user: StudioUser }) {
   async function revoke(id?: string) {
     try {
       await api.del(id ? `/api/auth/sessions/${id}` : "/api/auth/sessions");
-      toast(id ? "signed that device out" : "signed out everywhere else");
+      toast(id ? "Signed that device out" : "Signed out everywhere else");
       load();
     } catch (e) {
       setErr((e as Error).message);
     }
   }
 
+  const rowLink = "shrink-0 text-ink-soft underline underline-offset-4 hover:text-danger";
+
   return (
     <Dialog title="Account" variant="sheet" onClose={close}>
-
-      <Group label="your handle — the public name on your tag">
-        <div className="rounded-lg border border-rule bg-ground/40 px-3 py-2.5 text-[15px] lowercase">✦ {user.handle}</div>
-      </Group>
+      <FormField label="Handle">
+        <div className="flex h-10 items-center rounded-control bg-wash px-3 font-mono">@{user.handle}</div>
+        <p className="mt-1.5 text-caption text-ink-soft">Your public name. You sign in with it.</p>
+      </FormField>
 
       <EmailSection me={me} onChange={load} />
 
-      <Group label="passkeys — unlock with face, fingerprint or device">
+      <FormField label="Passkeys" className="mt-7">
         {passkeys.length > 0 ? (
-          <ul className="mb-2 space-y-1">
+          <ul className="mb-3 divide-y divide-rule border-y border-rule">
             {passkeys.map((p) => (
-              <li key={p.id} className="flex items-center justify-between gap-2 rounded-lg border border-rule px-3 py-2 text-xs lowercase">
+              <li key={p.id} className="flex items-center justify-between gap-3 py-2 text-caption">
                 <span className="min-w-0 truncate">
-                  {p.deviceLabel ?? "passkey"} <span className="text-ink-soft">· {when(p.createdAt)}</span>
+                  <span className="cap-first inline-block">{p.deviceLabel ?? "Passkey"}</span>{" "}
+                  <span className="text-ink-soft">· {when(p.createdAt)}</span>
                 </span>
-                <button onClick={() => removePasskey(p.id)} className="shrink-0 text-ink-soft hover:text-blush" aria-label={`remove passkey ${p.deviceLabel ?? ""}`}>
-                  remove
+                <button onClick={() => removePasskey(p.id)} className={rowLink} aria-label={`Remove passkey ${p.deviceLabel ?? ""}`}>
+                  Remove
                 </button>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="mb-2 text-[11px] lowercase text-ink-soft">none yet. the fastest way back in on this device.</p>
+          <p className="mb-3 text-caption text-ink-soft">
+            None yet. A passkey signs you in with your face, fingerprint or device PIN, and is the quickest way back in.
+          </p>
         )}
-        <QuietButton onClick={addPasskey} className="w-full">+ add a passkey on this device</QuietButton>
-      </Group>
+        <Button onClick={addPasskey} className="w-full">
+          Add a passkey on this device
+        </Button>
+      </FormField>
 
       <CombinationSection hasCombination={!!me?.hasCombination} onDone={load} />
 
-      <Group label="totals shown in">
-        <select
-          aria-label="display currency"
+      <FormField label="Show totals in" htmlFor="account-currency" className="mt-7">
+        <Select
+          id="account-currency"
           value={me?.displayCurrency ?? user.displayCurrency}
           onChange={async (e) => {
             const displayCurrency = e.target.value;
             setMe((m) => (m ? { ...m, displayCurrency } : m));
             await api.patch("/api/auth/me", { displayCurrency }).catch(() => {});
           }}
-          className="w-full rounded-lg border border-rule bg-ground/40 px-3 py-2 text-base lowercase outline-none focus:border-ink sm:text-sm"
         >
           {[...CURRENCIES.map((c) => c.code), "CAD", "AUD", "INR", "KES", "GHS", "ZAR", "BRL", "CHF", "SEK"].map((c) => (
-            <option key={c} value={c}>{c.toLowerCase()}</option>
+            <option key={c} value={c}>
+              {c}
+            </option>
           ))}
-        </select>
-      </Group>
+        </Select>
+      </FormField>
 
-      <Group label="signed in on">
-        <ul className="space-y-1">
+      <FormField label="Signed in on" className="mt-7">
+        <ul className="divide-y divide-rule border-y border-rule">
           {sessions.map((s) => (
-            <li key={s.id} className="flex items-center justify-between gap-2 text-xs lowercase">
+            <li key={s.id} className="flex items-center justify-between gap-3 py-2 text-caption">
               <span className="min-w-0 truncate">
-                {deviceName(s.userAgent)} {s.current ? <b>· this one</b> : <span className="text-ink-soft">· {when(s.lastSeenAt)}</span>}
+                {deviceName(s.userAgent)}{" "}
+                {s.current ? <span className="font-medium">· this device</span> : <span className="text-ink-soft">· {when(s.lastSeenAt)}</span>}
               </span>
               {!s.current && (
-                <button onClick={() => revoke(s.id)} className="shrink-0 text-ink-soft hover:text-blush">
-                  sign out
+                <button onClick={() => revoke(s.id)} className={rowLink}>
+                  Sign out
                 </button>
               )}
             </li>
           ))}
         </ul>
         {sessions.length > 1 && (
-          <button onClick={() => revoke()} className="mt-2 text-[11px] lowercase text-ink-soft underline underline-offset-4 hover:text-ink">
-            sign out everywhere else
+          <button onClick={() => revoke()} className="mt-2.5 text-caption text-ink-soft underline underline-offset-4 hover:text-ink">
+            Sign out everywhere else
           </button>
         )}
-      </Group>
+      </FormField>
 
-      <Group label="your data">
-        <a
-          href="/api/account/export"
-          className="block rounded-xl border border-rule px-4 py-2.5 text-center text-sm lowercase hover:bg-ink/5"
-        >
-          download everything (.json)
+      <FormField label="Your data" className="mt-7">
+        <a href="/api/account/export" className={buttonClass("secondary", "md", "w-full")}>
+          Download everything (JSON)
         </a>
-      </Group>
+      </FormField>
 
-      {err && <p className="mt-4 text-xs lowercase text-blush" role="alert">{err}</p>}
+      {err && (
+        <p className="cap-first mt-4 text-caption text-danger" role="alert">
+          {err}
+        </p>
+      )}
 
       <div className="mt-8 border-t border-rule pt-5">
-        <QuietButton onClick={signOut} className="w-full">sign out</QuietButton>
+        <Button onClick={signOut} className="w-full">
+          Sign out
+        </Button>
       </div>
 
       <DeleteAccount handle={user.handle} onDeleted={() => { reset(); router.replace("/"); router.refresh(); }} />
@@ -213,30 +227,30 @@ function EmailSection({ me, onChange }: { me: Me | null; onChange: () => void })
   }
 
   return (
-    <Group label="email">
+    <FormField label="Email" className="mt-7">
       {me?.email ? (
-        <div className="flex items-center justify-between gap-2 rounded-lg border border-rule bg-ground/40 px-3 py-2.5 text-[15px] lowercase">
+        <div className="flex h-10 items-center justify-between gap-2 rounded-control bg-wash px-3">
           <span className="min-w-0 truncate">{me.email}</span>
           <button
             onClick={() =>
               act(async () => {
                 await api.del("/api/auth/email");
-                setNote("email removed.");
+                setNote("Email removed.");
                 onChange();
               })
             }
-            className="shrink-0 text-xs text-ink-soft hover:text-blush"
+            className="shrink-0 text-caption text-ink-soft underline underline-offset-4 hover:text-danger"
           >
-            remove
+            Remove
           </button>
         </div>
       ) : (
-        <p className="text-[11px] lowercase text-ink-soft">
-          no email yet. add one to sign in by email, recover your wardrobe, and get price-drop alerts.
+        <p className="text-caption text-ink-soft">
+          No email yet. Add one to sign in by email, recover your account and get price-drop alerts.
         </p>
       )}
 
-      <div className="mt-3 flex flex-col gap-2">
+      <div className="mt-3">
         {!sent ? (
           <form
             className="flex flex-col gap-2"
@@ -245,22 +259,22 @@ function EmailSection({ me, onChange }: { me: Me | null; onChange: () => void })
               act(async () => {
                 await api.post("/api/auth/email/add/request", { email });
                 setSent(true);
-                setNote(`if ${email} can receive mail, a 6-digit code is on its way. it's good for 15 minutes.`);
+                setNote(`If ${email} can receive mail, a 6-digit code is on its way. It works for 15 minutes.`);
               });
             }}
           >
-            <Field
+            <Input
               type="email"
               inputMode="email"
               autoComplete="email"
-              aria-label={me?.email ? "new email" : "email"}
-              placeholder={me?.email ? "new email" : "you@example.com"}
+              aria-label={me?.email ? "New email" : "Email"}
+              placeholder={me?.email ? "New email" : "you@example.com"}
               value={email}
               onChange={(e) => setEmail(e.target.value.trim())}
             />
-            <PrimaryButton type="submit" disabled={busy || email.length < 3}>
-              {busy ? "sending…" : me?.email ? "send code to change" : "send me a code ✦"}
-            </PrimaryButton>
+            <Button type="submit" variant="primary" disabled={busy || email.length < 3}>
+              {busy ? "Sending…" : me?.email ? "Send a code to change it" : "Send me a code"}
+            </Button>
           </form>
         ) : (
           <form
@@ -272,32 +286,36 @@ function EmailSection({ me, onChange }: { me: Me | null; onChange: () => void })
                 setSent(false);
                 setCode("");
                 setEmail("");
-                setNote("email attached ✦");
+                setNote("Email added.");
                 onChange();
               });
             }}
           >
-            <Field
+            <Input
               inputMode="numeric"
               autoComplete="one-time-code"
               aria-label="6-digit code"
-              placeholder="• • • • • •"
+              placeholder="6-digit code"
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-              className="tracking-[0.3em]"
+              className="font-mono tracking-[0.3em] placeholder:tracking-normal"
             />
-            <PrimaryButton type="submit" disabled={busy || code.length < 6}>
-              {busy ? "confirming…" : "confirm email ✦"}
-            </PrimaryButton>
-            <button type="button" onClick={() => setSent(false)} className="text-xs lowercase text-ink-soft underline underline-offset-4">
-              use a different email
+            <Button type="submit" variant="primary" disabled={busy || code.length < 6}>
+              {busy ? "Confirming…" : "Confirm email"}
+            </Button>
+            <button type="button" onClick={() => setSent(false)} className="text-caption text-ink-soft underline underline-offset-4 hover:text-ink">
+              Use a different email
             </button>
           </form>
         )}
       </div>
-      {note && <p className="mt-2 text-xs lowercase text-ink-soft">{note}</p>}
-      {err && <p className="mt-2 text-xs lowercase text-blush" role="alert">{err}</p>}
-    </Group>
+      {note && <p className="mt-2 text-caption text-ink-soft">{note}</p>}
+      {err && (
+        <p className="cap-first mt-2 text-caption text-danger" role="alert">
+          {err}
+        </p>
+      )}
+    </FormField>
   );
 }
 
@@ -313,7 +331,7 @@ function CombinationSection({ hasCombination, onDone }: { hasCombination: boolea
     try {
       setNext((await api.get("/api/auth/generate")).phrase);
     } catch {
-      setErr("couldn't make a combination — try again");
+      setErr("Couldn't make a combination. Try again.");
     }
   }
 
@@ -323,7 +341,7 @@ function CombinationSection({ hasCombination, onDone }: { hasCombination: boolea
     setErr("");
     try {
       await api.post("/api/auth/combination", { current: current || undefined, newPhrase: next });
-      setDone(`saved. your combination is now: ${next} — write it down.`);
+      setDone(`Saved. Your combination is now: ${next}. Write it down.`);
       setOpen(false);
       setCurrent("");
       onDone();
@@ -334,15 +352,15 @@ function CombinationSection({ hasCombination, onDone }: { hasCombination: boolea
   }
 
   return (
-    <Group label="combination">
+    <FormField label="Combination" className="mt-7">
       {!open ? (
         <>
-          <p className="mb-2 text-[11px] lowercase text-ink-soft">
+          <p className="mb-3 text-caption text-ink-soft">
             {hasCombination
-              ? "sign in with your handle + combination. changing it signs out your other devices."
-              : "no combination yet — add one as another way in."}
+              ? "You can sign in with your handle and combination. Changing it signs out your other devices."
+              : "No combination yet. Add one as another way to sign in."}
           </p>
-          <QuietButton
+          <Button
             onClick={() => {
               setOpen(true);
               setDone("");
@@ -350,33 +368,37 @@ function CombinationSection({ hasCombination, onDone }: { hasCombination: boolea
             }}
             className="w-full"
           >
-            {hasCombination ? "change combination" : "set a combination"}
-          </QuietButton>
+            {hasCombination ? "Change combination" : "Set a combination"}
+          </Button>
         </>
       ) : (
         <div className="flex flex-col gap-2">
           {hasCombination && (
-            <Field aria-label="current combination" placeholder="current combination" value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" />
+            <Input aria-label="Current combination" placeholder="Current combination" value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" />
           )}
           <div className="flex items-center gap-2">
-            <div className="flex-1 rounded-lg border border-rule bg-ground/40 px-3 py-2.5 font-[family-name:var(--font-display)] text-[13px]" aria-live="polite">
+            <div className="flex min-h-10 flex-1 items-center rounded-control bg-wash px-3 py-2 font-mono text-caption" aria-live="polite">
               {next ?? "…"}
             </div>
-            <button onClick={roll} aria-label="reroll" className="rounded-lg border border-rule px-3 py-2.5 text-sm hover:bg-ink/5">
-              ↻
-            </button>
+            <IconButton label="Make a different one" variant="secondary" onClick={roll}>
+              <RefreshCw aria-hidden className="h-4 w-4" />
+            </IconButton>
           </div>
-          <PrimaryButton onClick={save} disabled={busy || !next || (hasCombination && current.length < 3)}>
-            {busy ? "setting…" : "use this combination"}
-          </PrimaryButton>
-          <button onClick={() => setOpen(false)} className="text-xs lowercase text-ink-soft underline underline-offset-4">
-            cancel
-          </button>
+          <Button variant="primary" onClick={save} disabled={busy || !next || (hasCombination && current.length < 3)}>
+            {busy ? "Saving…" : "Use this combination"}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
         </div>
       )}
-      {done && <p className="mt-2 break-words text-xs lowercase text-ink">{done}</p>}
-      {err && <p className="mt-2 text-xs lowercase text-blush" role="alert">{err}</p>}
-    </Group>
+      {done && <p className="mt-2 break-words text-caption">{done}</p>}
+      {err && (
+        <p className="cap-first mt-2 text-caption text-danger" role="alert">
+          {err}
+        </p>
+      )}
+    </FormField>
   );
 }
 
@@ -389,17 +411,19 @@ function DeleteAccount({ handle, onDeleted }: { handle: string; onDeleted: () =>
   return (
     <div className="mt-6">
       {!open ? (
-        <button onClick={() => setOpen(true)} className="text-[11px] lowercase text-ink-soft underline underline-offset-4 hover:text-blush">
-          delete my account…
+        <button onClick={() => setOpen(true)} className="text-caption text-ink-soft underline underline-offset-4 hover:text-danger">
+          Delete my account…
         </button>
       ) : (
-        <div className="rounded-xl border border-blush/60 p-3">
-          <p className="text-xs lowercase">
-            this deletes every wardrobe, item and photo for good. type <b>{handle}</b> to confirm.
+        <div className="rounded-card border border-danger bg-danger-wash p-3.5">
+          <p className="text-caption">
+            This deletes every wardrobe, item and photo for good. Type <b>{handle}</b> to confirm.
           </p>
-          <Field aria-label="type your handle to confirm" value={confirm} onChange={(e) => setConfirm(e.target.value)} className="mt-2" />
-          <div className="mt-2 flex gap-2">
-            <button
+          <Input aria-label="Type your handle to confirm" value={confirm} onChange={(e) => setConfirm(e.target.value)} className="mt-2.5" />
+          <div className="mt-2.5 flex gap-2">
+            <Button
+              variant="danger"
+              className="flex-1"
               disabled={busy || confirm.trim().toLowerCase() !== handle}
               onClick={async () => {
                 setBusy(true);
@@ -411,15 +435,16 @@ function DeleteAccount({ handle, onDeleted }: { handle: string; onDeleted: () =>
                   setBusy(false);
                 }
               }}
-              className="flex-1 rounded-lg bg-blush px-3 py-2 text-xs lowercase text-white disabled:opacity-40"
             >
-              {busy ? "deleting…" : "delete forever"}
-            </button>
-            <button onClick={() => setOpen(false)} className="rounded-lg border border-rule px-3 py-2 text-xs lowercase">
-              keep it
-            </button>
+              {busy ? "Deleting…" : "Delete for good"}
+            </Button>
+            <Button onClick={() => setOpen(false)}>Keep it</Button>
           </div>
-          {err && <p className="mt-2 text-xs lowercase text-blush" role="alert">{err}</p>}
+          {err && (
+            <p className="cap-first mt-2 text-caption text-danger" role="alert">
+              {err}
+            </p>
+          )}
         </div>
       )}
     </div>

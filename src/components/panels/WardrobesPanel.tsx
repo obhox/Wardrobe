@@ -1,16 +1,20 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowDown, ArrowUp } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { api } from "@/lib/api";
+import { cx } from "@/lib/cx";
 import Dialog from "@/components/ui/Dialog";
-import { Field, Group, PrimaryButton } from "@/components/ui/controls";
+import { Button, IconButton } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { FormField, Input } from "@/components/ui/Field";
 
 const TEMPLATES = [
-  { id: "closet", label: "closet", hint: "tops · bottoms · shoes · bags" },
-  { id: "wishlist", label: "wishlist", hint: "soon · someday" },
-  { id: "gear", label: "gear", hint: "tech · outdoor · tools" },
-  { id: "blank", label: "blank", hint: "no sections" },
+  { id: "closet", label: "Closet", hint: "Tops, bottoms, shoes, bags" },
+  { id: "wishlist", label: "Wishlist", hint: "Soon, someday" },
+  { id: "gear", label: "Gear", hint: "Tech, outdoor, tools" },
+  { id: "blank", label: "Blank", hint: "No sections" },
 ];
 
 // Create, reorder, duplicate and delete wardrobes.
@@ -58,44 +62,56 @@ export default function WardrobesPanel() {
     api.patch("/api/wardrobes", { order: next }).then(() => router.refresh()).catch(() => {});
   }
 
+  const link = "underline underline-offset-4 hover:text-ink disabled:opacity-40";
+
   return (
     <Dialog title="Your wardrobes" variant="sheet" onClose={close}>
-
-      <Group label="all of them">
-        <ul className="space-y-1.5">
-          {order.map((id, i) => {
-            const w = byId.get(id);
-            if (!w) return null;
-            return (
-              <li key={id} className="rounded-lg border border-rule px-3 py-2 text-sm lowercase">
-                <div className="flex items-center gap-2">
-                  <button onClick={() => go(id)} className="min-w-0 flex-1 truncate text-left hover:underline">
-                    {w.icon ?? "✦"} {w.title} <span className="text-xs text-ink-soft">· {w.count}</span>
-                    {id === current && <span className="text-xs text-ink-soft"> · open</span>}
+      <ul className="space-y-2">
+        {order.map((id, i) => {
+          const w = byId.get(id);
+          if (!w) return null;
+          return (
+            <li key={id}>
+              <Card className="py-2 pl-3.5 pr-2">
+                <div className="flex items-center gap-1">
+                  <button onClick={() => go(id)} className="flex min-w-0 flex-1 items-baseline gap-2 py-1 text-left hover:underline">
+                    <span className="cap-first truncate font-medium">{w.title}</span>
+                    <span className="label-caps tabular shrink-0 text-ink-faint">{w.count}</span>
+                    {id === current && <span className="label-caps shrink-0 text-ink-faint">Open</span>}
                   </button>
-                  <button disabled={i === 0} onClick={() => move(i, -1)} aria-label={`move ${w.title} up`} className="px-1 text-xs text-ink-soft disabled:opacity-30">↑</button>
-                  <button disabled={i === order.length - 1} onClick={() => move(i, 1)} aria-label={`move ${w.title} down`} className="px-1 text-xs text-ink-soft disabled:opacity-30">↓</button>
+                  <IconButton label={`Move ${w.title} up`} size="sm" disabled={i === 0} onClick={() => move(i, -1)}>
+                    <ArrowUp aria-hidden className="h-4 w-4" />
+                  </IconButton>
+                  <IconButton label={`Move ${w.title} down`} size="sm" disabled={i === order.length - 1} onClick={() => move(i, 1)}>
+                    <ArrowDown aria-hidden className="h-4 w-4" />
+                  </IconButton>
                 </div>
-                <div className="mt-1 flex gap-3 text-[11px] text-ink-soft">
-                  <button
-                    disabled={busy}
-                    onClick={() => act(async () => go((await api.post(`/api/wardrobes/${id}/duplicate`)).id))}
-                    className="underline underline-offset-4 hover:text-ink"
-                  >
-                    duplicate look
+                <div className="flex gap-4 pb-1 text-caption text-ink-soft">
+                  <button disabled={busy} onClick={() => act(async () => go((await api.post(`/api/wardrobes/${id}/duplicate`)).id))} className={link}>
+                    Duplicate its look
                   </button>
                   {wardrobes.length > 1 && (
-                    <button onClick={() => { setDeleting(id); setConfirm(""); }} className="underline underline-offset-4 hover:text-blush">
-                      delete…
+                    <button
+                      onClick={() => {
+                        setDeleting(id);
+                        setConfirm("");
+                      }}
+                      className="underline underline-offset-4 hover:text-danger"
+                    >
+                      Delete…
                     </button>
                   )}
                 </div>
                 {deleting === id && (
-                  <div className="mt-2 space-y-2">
-                    <p className="text-[11px]">deletes {w.count} item{w.count === 1 ? "" : "s"} and their photos. type <b>{w.title}</b> to confirm.</p>
-                    <Field aria-label="type the wardrobe name" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+                  <div className="space-y-2 border-t border-rule py-3 pr-1.5">
+                    <p className="text-caption">
+                      This deletes {w.count} item{w.count === 1 ? "" : "s"} and their photos. Type <b>{w.title}</b> to confirm.
+                    </p>
+                    <Input aria-label="Type the wardrobe's name" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
                     <div className="flex gap-2">
-                      <button
+                      <Button
+                        variant="danger"
+                        className="flex-1"
                         disabled={busy || confirm.trim().toLowerCase() !== w.title.trim().toLowerCase()}
                         onClick={() =>
                           act(async () => {
@@ -109,45 +125,53 @@ export default function WardrobesPanel() {
                             }
                           })
                         }
-                        className="flex-1 rounded-lg bg-blush px-3 py-1.5 text-xs text-white disabled:opacity-40"
                       >
-                        delete forever
-                      </button>
-                      <button onClick={() => setDeleting(null)} className="rounded-lg border border-rule px-3 py-1.5 text-xs">keep</button>
+                        Delete for good
+                      </Button>
+                      <Button onClick={() => setDeleting(null)}>Keep it</Button>
                     </div>
                   </div>
                 )}
-              </li>
-            );
-          })}
-        </ul>
-      </Group>
+              </Card>
+            </li>
+          );
+        })}
+      </ul>
 
-      <Group label="make a new one">
-        <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="start from">
+      <FormField label="Start a new one" className="mt-8">
+        <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Start from">
           {TEMPLATES.map((t) => (
             <button
               key={t.id}
               role="radio"
               aria-checked={template === t.id}
               onClick={() => setTemplate(t.id)}
-              className={"rounded-lg border p-2 text-left text-xs lowercase " + (template === t.id ? "border-ink bg-ink/5" : "border-rule hover:bg-ink/5")}
+              className={cx(
+                "rounded-control border p-2.5 text-left transition",
+                template === t.id ? "border-ink bg-wash" : "border-rule hover:border-rule-strong"
+              )}
             >
-              {t.label}
-              <span className="block text-[10px] text-ink-soft">{t.hint}</span>
+              <span className="block font-medium">{t.label}</span>
+              <span className="block text-caption text-ink-soft">{t.hint}</span>
             </button>
           ))}
         </div>
-        <Field aria-label="name" placeholder="name (optional)" value={title} maxLength={60} onChange={(e) => setTitle(e.target.value)} className="mt-2" />
-        <PrimaryButton
+        <Input aria-label="Name" placeholder="Name (optional)" value={title} maxLength={60} onChange={(e) => setTitle(e.target.value)} className="mt-3" />
+        <Button
+          variant="primary"
           disabled={busy}
           onClick={() => act(async () => go((await api.post("/api/wardrobes", { template, title: title.trim() || undefined })).id))}
-          className="mt-2 w-full"
+          className="mt-3 w-full"
         >
-          {busy ? "making…" : "make it ✦"}
-        </PrimaryButton>
-      </Group>
-      {err && <p className="mt-4 text-xs lowercase text-blush" role="alert">{err}</p>}
+          {busy ? "Creating…" : "Create wardrobe"}
+        </Button>
+      </FormField>
+
+      {err && (
+        <p className="mt-4 text-caption text-danger" role="alert">
+          {err}
+        </p>
+      )}
     </Dialog>
   );
 }

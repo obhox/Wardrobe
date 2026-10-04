@@ -17,7 +17,7 @@ export async function DELETE(req: NextRequest) {
   if (!me) return unauthorized();
   const parsed = schema.safeParse(await readJson(req));
   if (!parsed.success || parsed.data.confirm.trim().toLowerCase() !== me.handle) {
-    return error("type your handle to confirm", 400);
+    return error("Type your handle to confirm.", 400);
   }
 
   await deletePrefix(userPrefix(me.id)).catch((e) =>

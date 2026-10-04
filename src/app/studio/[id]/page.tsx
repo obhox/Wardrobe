@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { brand } from "@/lib/brand";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -8,7 +9,7 @@ import Studio from "../Studio";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "studio · wardrobe",
+  title: `Closet · ${brand.name}`,
   robots: { index: false, follow: false },
 };
 

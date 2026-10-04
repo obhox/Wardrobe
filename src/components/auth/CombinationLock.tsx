@@ -1,12 +1,17 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { ArrowLeft, RefreshCw } from "lucide-react";
 import { startAuthentication } from "@simplewebauthn/browser";
 import { api } from "@/lib/api";
 import { track } from "@/lib/analytics";
+import { brand } from "@/lib/brand";
+import { Button, IconButton } from "@/components/ui/Button";
+import { FormField, Input } from "@/components/ui/Field";
 
 type Mode = "home" | "email" | "login" | "create" | "recover";
 
+// The sign-in card: email code, handle + combination, passkey, and recovery.
 export default function CombinationLock() {
   const [mode, setMode] = useState<Mode>("home");
   // a full page load (not a client-side route change) so the studio's own
@@ -15,19 +20,10 @@ export default function CombinationLock() {
 
   return (
     <div className="w-full max-w-md">
-      {/* luggage tag */}
-      <motion.div
-        layout
-        className="relative rounded-2xl border border-rule bg-panel/80 backdrop-blur px-7 py-8 shadow-overlay"
-      >
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 h-6 w-6 rounded-full border border-rule bg-ground" />
+      <motion.div layout className="rounded-sheet border border-rule bg-panel px-6 py-8 shadow-card sm:px-8">
         <div className="text-center">
-          <div className="font-[family-name:var(--font-display)] text-3xl tracking-tight lowercase">
-            ✦ wardrobe
-          </div>
-          <p className="mt-1 text-sm text-ink-soft lowercase">
-            your closet, made beautiful.
-          </p>
+          <div className="font-display text-display">{brand.name}</div>
+          <p className="mt-1 text-ink-soft">{brand.tagline}</p>
         </div>
 
         <AnimatePresence mode="wait">
@@ -39,8 +35,8 @@ export default function CombinationLock() {
         </AnimatePresence>
       </motion.div>
 
-      <p className="mt-4 text-center text-xs text-ink-soft lowercase">
-        share your <b>handle</b>, never your <b>combination</b>.
+      <p className="mt-4 text-center text-caption text-ink-soft">
+        Share your <b>handle</b>, never your <b>combination</b>.
       </p>
     </div>
   );
@@ -52,39 +48,50 @@ const fade = {
   exit: { opacity: 0, y: -8 },
 };
 
+function Problem({ children }: { children: string }) {
+  if (!children) return null;
+  return (
+    <p className="cap-first text-caption text-danger" role="alert">
+      {children}
+    </p>
+  );
+}
+
+// a generated combination, with a button to make another
+function Phrase({ value, onReroll }: { value: string | null | undefined; onReroll: () => void }) {
+  return (
+    <div className="flex items-center gap-2">
+      <div aria-live="polite" className="flex min-h-10 flex-1 items-center rounded-control bg-wash px-3 py-2 font-mono text-sm">
+        {value || "…"}
+      </div>
+      <IconButton label="Make a different one" variant="secondary" onClick={onReroll}>
+        <RefreshCw aria-hidden className="h-4 w-4" />
+      </IconButton>
+    </div>
+  );
+}
+
 function Home({ setMode }: { setMode: (m: Mode) => void }) {
   return (
     <motion.div {...fade} className="mt-7 flex flex-col gap-3">
-      <button
-        onClick={() => setMode("email")}
-        className="rounded-xl bg-ink py-3 text-[15px] lowercase text-panel transition hover:opacity-90"
-      >
-        continue with email ✦
-      </button>
+      <Button variant="primary" size="lg" onClick={() => setMode("email")}>
+        Continue with email
+      </Button>
 
-      <div className="my-1 flex items-center gap-3 text-[11px] lowercase text-ink-soft">
+      <div className="label-caps my-1 flex items-center gap-3 text-ink-faint">
         <span className="h-px flex-1 bg-rule" />
         or use a combination
         <span className="h-px flex-1 bg-rule" />
       </div>
 
-      <button
-        onClick={() => setMode("login")}
-        className="rounded-xl border border-rule py-3 text-[15px] lowercase transition hover:bg-ink/5"
-      >
-        open with a combination
-      </button>
-      <button
-        onClick={() => setMode("create")}
-        className="rounded-xl border border-rule py-3 text-[15px] lowercase transition hover:bg-ink/5"
-      >
-        make one with a combination
-      </button>
-      <button
-        onClick={() => setMode("recover")}
-        className="mt-1 text-xs lowercase text-ink-soft underline underline-offset-4"
-      >
-        lost your combination?
+      <Button size="lg" onClick={() => setMode("login")}>
+        Sign in with a combination
+      </Button>
+      <Button size="lg" onClick={() => setMode("create")}>
+        Create an account with one
+      </Button>
+      <button onClick={() => setMode("recover")} className="mt-1 text-caption text-ink-soft underline underline-offset-4 hover:text-ink">
+        Lost your combination?
       </button>
     </motion.div>
   );
@@ -105,7 +112,7 @@ function EmailMagic({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: (
     try {
       await api.post("/api/auth/email/request", { email });
       setSent(true);
-      setNote(`we sent a 6-digit code to ${email}. it's good for 15 minutes.`);
+      setNote(`We sent a 6-digit code to ${email}. It works for 15 minutes.`);
     } catch (e) {
       setErr((e as Error).message);
     }
@@ -126,76 +133,54 @@ function EmailMagic({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: (
 
   return (
     <motion.div {...fade} className="mt-7 flex flex-col gap-3">
-      <label className="text-xs lowercase text-ink-soft">your email</label>
-      <Field
-        type="email"
-        inputMode="email"
-        autoComplete="email"
-        autoFocus
-        placeholder="you@example.com"
-        value={email}
-        onChange={(e) => setEmail(e.target.value.trim())}
-        onKeyDown={(e) => e.key === "Enter" && !sent && email && requestCode()}
-        className="lowercase"
-      />
+      <FormField label="Email" htmlFor="email-address">
+        <Input
+          id="email-address"
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          autoFocus
+          placeholder="you@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value.trim())}
+          onKeyDown={(e) => e.key === "Enter" && !sent && email && requestCode()}
+        />
+      </FormField>
 
       {!sent ? (
-        <button
-          disabled={busy || email.length < 3}
-          onClick={requestCode}
-          className="rounded-xl bg-ink py-3 text-[15px] lowercase text-panel transition hover:opacity-90 disabled:opacity-40"
-        >
-          {busy ? "sending…" : "email me a code ✦"}
-        </button>
+        <Button variant="primary" size="lg" disabled={busy || email.length < 3} onClick={requestCode}>
+          {busy ? "Sending…" : "Email me a code"}
+        </Button>
       ) : (
         <>
-          <label className="text-xs lowercase text-ink-soft">enter the 6-digit code</label>
-          <Field
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            autoFocus
-            placeholder="• • • • • •"
-            value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-            onKeyDown={(e) => e.key === "Enter" && code.length === 6 && verify()}
-            className="tracking-[0.3em]"
-          />
-          <button
-            disabled={busy || code.length < 6}
-            onClick={verify}
-            className="rounded-xl bg-ink py-3 text-[15px] lowercase text-panel transition hover:opacity-90 disabled:opacity-40"
-          >
-            {busy ? "opening…" : "open my wardrobe ✦"}
-          </button>
-          <button
-            onClick={requestCode}
-            disabled={busy}
-            className="text-xs lowercase text-ink-soft underline underline-offset-4 disabled:opacity-40"
-          >
-            resend the code
+          <FormField label="6-digit code" htmlFor="email-code">
+            <Input
+              id="email-code"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              autoFocus
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              onKeyDown={(e) => e.key === "Enter" && code.length === 6 && verify()}
+              className="font-mono tracking-[0.3em]"
+            />
+          </FormField>
+          <Button variant="primary" size="lg" disabled={busy || code.length < 6} onClick={verify}>
+            {busy ? "Opening…" : "Open my wardrobe"}
+          </Button>
+          <button onClick={requestCode} disabled={busy} className="text-caption text-ink-soft underline underline-offset-4 hover:text-ink disabled:opacity-40">
+            Resend the code
           </button>
         </>
       )}
 
-      {note && <p className="text-xs lowercase text-ink-soft">{note}</p>}
-      <p className="text-[11px] lowercase text-ink-soft">
-        new here? this makes your wardrobe. already have one on this email? it opens it.
+      {note && <p className="text-caption text-ink-soft">{note}</p>}
+      <p className="text-caption text-ink-faint">
+        New here? This creates your wardrobe. Already have one on this email? This opens it.
       </p>
-      {err && <p className="text-xs text-blush lowercase" role="alert">{err}</p>}
+      <Problem>{err}</Problem>
       <BackRow setMode={setMode} />
     </motion.div>
-  );
-}
-
-function Field(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <input
-      {...props}
-      className={
-        "w-full rounded-lg border border-rule bg-ground/40 px-3 py-2.5 text-[15px] lowercase outline-none placeholder:text-ink-soft/60 focus:border-ink " +
-        (props.className ?? "")
-      }
-    />
   );
 }
 
@@ -227,7 +212,7 @@ function Login({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: () => 
       onDone();
     } catch (e) {
       const msg = (e as Error).message || "";
-      setErr(/abort|cancel|not allowed/i.test(msg) ? "passkey cancelled" : msg || "passkey didn't work");
+      setErr(/abort|cancel|not allowed/i.test(msg) ? "Passkey cancelled." : msg || "The passkey didn't work.");
       setBusy(false);
     }
   }
@@ -241,41 +226,34 @@ function Login({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: () => 
         submit();
       }}
     >
-      <label htmlFor="login-handle" className="text-xs lowercase text-ink-soft">your handle</label>
-      <Field
-        id="login-handle"
-        autoFocus
-        autoComplete="username"
-        autoCapitalize="none"
-        placeholder="moth"
-        value={handle}
-        onChange={(e) => setHandle(e.target.value)}
-      />
-      <label htmlFor="login-phrase" className="text-xs lowercase text-ink-soft">turn your combination</label>
-      <Field
-        id="login-phrase"
-        type="password"
-        autoComplete="current-password"
-        placeholder="linen · brass · moth · button · 47"
-        value={phrase}
-        onChange={(e) => setPhrase(e.target.value)}
-      />
-      {err && <p className="text-xs text-blush lowercase" role="alert">{err}</p>}
-      <button
-        type="submit"
-        disabled={busy || handle.trim().length < 2 || phrase.trim().length < 3}
-        className="rounded-xl bg-ink py-3 text-[15px] lowercase text-panel transition hover:opacity-90 disabled:opacity-40"
-      >
-        {busy ? "turning…" : "unlock ✦"}
-      </button>
-      <button
-        type="button"
-        onClick={passkey}
-        disabled={busy}
-        className="rounded-xl border border-rule py-2.5 text-[13px] lowercase transition hover:bg-ink/5"
-      >
-        use a passkey instead
-      </button>
+      <FormField label="Handle" htmlFor="login-handle">
+        <Input
+          id="login-handle"
+          autoFocus
+          autoComplete="username"
+          autoCapitalize="none"
+          placeholder="moth"
+          value={handle}
+          onChange={(e) => setHandle(e.target.value)}
+        />
+      </FormField>
+      <FormField label="Combination" htmlFor="login-phrase">
+        <Input
+          id="login-phrase"
+          type="password"
+          autoComplete="current-password"
+          placeholder="linen · brass · moth · button · 47"
+          value={phrase}
+          onChange={(e) => setPhrase(e.target.value)}
+        />
+      </FormField>
+      <Problem>{err}</Problem>
+      <Button type="submit" variant="primary" size="lg" disabled={busy || handle.trim().length < 2 || phrase.trim().length < 3}>
+        {busy ? "Signing in…" : "Sign in"}
+      </Button>
+      <Button onClick={passkey} disabled={busy}>
+        Use a passkey instead
+      </Button>
       <BackRow setMode={setMode} />
     </motion.form>
   );
@@ -298,7 +276,7 @@ function Create({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: () =>
       if (!keepHandle) setHandle(`${c.handle}-${c.digit}`);
       setErr("");
     } catch {
-      setErr("couldn't reach wardrobe to make a combination — check your connection and reroll.");
+      setErr("Couldn't make a combination. Check your connection and try another.");
     }
   }, []);
 
@@ -323,28 +301,12 @@ function Create({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: () =>
 
   return (
     <motion.div {...fade} className="mt-7 flex flex-col gap-3">
-      <span className="text-xs lowercase text-ink-soft">your combination — reroll until it feels yours</span>
-      <div className="flex items-center gap-2">
-        <div
-          aria-live="polite"
-          className="flex-1 rounded-lg border border-rule bg-ground/40 px-3 py-3 font-[family-name:var(--font-display)] text-[14px]"
-        >
-          {combo?.phrase ?? "…"}
-        </div>
-        <button
-          onClick={() => roll(handleTouched)}
-          className="rounded-lg border border-rule px-3 py-3 text-sm lowercase transition hover:bg-ink/5"
-          aria-label="reroll"
-        >
-          ↻
-        </button>
-      </div>
-      <label htmlFor="create-handle" className="mt-1 text-xs lowercase text-ink-soft">
-        pick your handle — your public name (you sign in with it)
-      </label>
-      <div className="flex items-center gap-2">
-        <span className="text-ink-soft" aria-hidden>✦</span>
-        <Field
+      <FormField label="Your combination">
+        <Phrase value={combo?.phrase} onReroll={() => roll(handleTouched)} />
+        <p className="mt-1.5 text-caption text-ink-soft">This is your password. Make another until you like it.</p>
+      </FormField>
+      <FormField label="Handle" htmlFor="create-handle">
+        <Input
           id="create-handle"
           autoCapitalize="none"
           autoComplete="username"
@@ -355,21 +317,21 @@ function Create({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: () =>
             setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""));
           }}
         />
-      </div>
+        <p className="mt-1.5 text-caption text-ink-soft">Your public name. You sign in with it.</p>
+      </FormField>
 
-      <label className="mt-1 flex cursor-pointer items-start gap-2 text-[12px] lowercase text-ink-soft">
-        <input type="checkbox" checked={saved} onChange={(e) => setSaved(e.target.checked)} className="mt-0.5" />
-        <span>i&apos;ve saved my handle and combination somewhere safe. you can add an email or a passkey as a spare key from your account.</span>
+      <label className="mt-1 flex cursor-pointer items-start gap-2.5 text-caption text-ink-soft">
+        <input type="checkbox" checked={saved} onChange={(e) => setSaved(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--ink)]" />
+        <span>
+          I&apos;ve saved my handle and combination somewhere safe. You can add an email or a passkey as a spare key from
+          your account.
+        </span>
       </label>
 
-      {err && <p className="text-xs text-blush lowercase" role="alert">{err}</p>}
-      <button
-        disabled={busy || !combo || handle.trim().length < 2 || !saved}
-        onClick={create}
-        className="rounded-xl bg-ink py-3 text-[15px] lowercase text-panel transition hover:opacity-90 disabled:opacity-40"
-      >
-        {busy ? "setting the lock…" : "this is mine ✦"}
-      </button>
+      <Problem>{err}</Problem>
+      <Button variant="primary" size="lg" disabled={busy || !combo || handle.trim().length < 2 || !saved} onClick={create}>
+        {busy ? "Creating…" : "Create my wardrobe"}
+      </Button>
       <BackRow setMode={setMode} />
     </motion.div>
   );
@@ -381,16 +343,16 @@ function Recover({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: () =
   const [emailSent, setEmailSent] = useState(false);
   const [newPhrase, setNewPhrase] = useState("");
   const [note, setNote] = useState("");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
 
   async function rollNew() {
     try {
       setNewPhrase((await api.get("/api/auth/generate")).phrase);
     } catch {
-      setErr("couldn't make a combination — try again");
+      setErr("Couldn't make a combination. Try again.");
     }
   }
-  const [err, setErr] = useState("");
-  const [busy, setBusy] = useState(false);
 
   // email a reset code to the address on file — the only way back in
   async function emailCode() {
@@ -401,7 +363,7 @@ function Recover({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: () =
       await api.post("/api/auth/recover/request", { handle });
       setEmailSent(true);
       if (!newPhrase) rollNew();
-      setNote("if an email is on file, a reset code is on its way. it's good for 15 minutes.");
+      setNote("If there is an email on that account, a reset code is on its way. It works for 15 minutes.");
     } catch (e) {
       setErr((e as Error).message);
     }
@@ -426,63 +388,49 @@ function Recover({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: () =
 
   return (
     <motion.div {...fade} className="mt-7 flex flex-col gap-3">
-      <label className="text-xs lowercase text-ink-soft">your handle</label>
-      <Field
-        placeholder="moth"
-        value={handle}
-        onChange={(e) => setHandle(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && handle && emailCode()}
-      />
+      <FormField label="Handle" htmlFor="recover-handle">
+        <Input
+          id="recover-handle"
+          autoCapitalize="none"
+          placeholder="moth"
+          value={handle}
+          onChange={(e) => setHandle(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handle && emailCode()}
+        />
+      </FormField>
 
-      <button
-        onClick={emailCode}
-        disabled={busy || !handle}
-        className="rounded-xl bg-ink py-3 text-[15px] lowercase text-panel transition hover:opacity-90 disabled:opacity-40"
-      >
-        {busy && !emailSent ? "sending…" : emailSent ? "resend code" : "email me a reset code ✦"}
-      </button>
+      <Button variant={emailSent ? "secondary" : "primary"} size="lg" onClick={emailCode} disabled={busy || !handle}>
+        {busy && !emailSent ? "Sending…" : emailSent ? "Resend the code" : "Email me a reset code"}
+      </Button>
 
       {emailSent && (
         <>
-          <div className="flex flex-col gap-1">
-            <span className="text-xs lowercase text-ink-soft">enter the 6-digit code from your email</span>
-            <Field
+          <FormField label="6-digit code from your email" htmlFor="recover-code">
+            <Input
+              id="recover-code"
               inputMode="numeric"
               autoComplete="one-time-code"
-              placeholder="• • • • • •"
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-              className="tracking-[0.3em]"
+              className="font-mono tracking-[0.3em]"
             />
-          </div>
-          <div className="flex flex-col gap-1">
-            <span className="text-xs lowercase text-ink-soft">your new combination — write it down</span>
-            <div className="flex items-center gap-2">
-              <div aria-live="polite" className="flex-1 rounded-lg border border-rule bg-ground/40 px-3 py-2.5 font-[family-name:var(--font-display)] text-[13px]">
-                {newPhrase || "…"}
-              </div>
-              <button onClick={rollNew} aria-label="reroll" className="rounded-lg border border-rule px-3 py-2.5 text-sm hover:bg-ink/5">
-                ↻
-              </button>
-            </div>
-          </div>
-          <button
-            disabled={busy || code.length < 6 || newPhrase.trim().length < 3}
-            onClick={reset}
-            className="rounded-xl bg-ink py-3 text-[15px] lowercase text-panel transition hover:opacity-90 disabled:opacity-40"
-          >
-            {busy ? "recovering…" : "set new combination ✦"}
-          </button>
+          </FormField>
+          <FormField label="Your new combination">
+            <Phrase value={newPhrase} onReroll={rollNew} />
+            <p className="mt-1.5 text-caption text-ink-soft">Write it down before you continue.</p>
+          </FormField>
+          <Button variant="primary" size="lg" disabled={busy || code.length < 6 || newPhrase.trim().length < 3} onClick={reset}>
+            {busy ? "Saving…" : "Set new combination"}
+          </Button>
         </>
       )}
 
-      {note && <p className="text-xs lowercase text-ink-soft">{note}</p>}
-      <p className="text-[11px] lowercase text-ink-soft">
-        no email on your account? it can&apos;t be recovered — that&apos;s the
-        trade for staying email-free.
+      {note && <p className="text-caption text-ink-soft">{note}</p>}
+      <p className="text-caption text-ink-faint">
+        No email on your account? Then it can&apos;t be recovered. That is the trade for staying email-free.
       </p>
 
-      {err && <p className="text-xs text-blush lowercase" role="alert">{err}</p>}
+      <Problem>{err}</Problem>
       <BackRow setMode={setMode} />
     </motion.div>
   );
@@ -491,10 +439,11 @@ function Recover({ setMode, onDone }: { setMode: (m: Mode) => void; onDone: () =
 function BackRow({ setMode }: { setMode: (m: Mode) => void }) {
   return (
     <button
+      type="button"
       onClick={() => setMode("home")}
-      className="mt-1 text-xs lowercase text-ink-soft underline underline-offset-4"
+      className="mt-1 inline-flex items-center justify-center gap-1 text-caption text-ink-soft hover:text-ink"
     >
-      ← back
+      <ArrowLeft aria-hidden className="h-3.5 w-3.5" /> Back
     </button>
   );
 }

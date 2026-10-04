@@ -12,13 +12,13 @@ export function error(message: string, status: number, extra?: Record<string, un
   return NextResponse.json({ error: message, ...extra }, { status });
 }
 
-export const unauthorized = () => error("not signed in", 401);
-export const notFound = () => error("not found", 404);
-export const invalid = () => error("invalid input", 400);
+export const unauthorized = () => error("You're not signed in.", 401);
+export const notFound = () => error("Not found.", 404);
+export const invalid = () => error("That doesn't look right. Check it and try again.", 400);
 
 export function tooMany(retryAfterMs: number) {
   return NextResponse.json(
-    { error: "too many tries — wait a moment", retryAfterMs },
+    { error: "Too many tries. Wait a moment.", retryAfterMs },
     { status: 429, headers: { "retry-after": String(Math.ceil(retryAfterMs / 1000)) } }
   );
 }

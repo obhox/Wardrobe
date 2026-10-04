@@ -4,7 +4,9 @@ import { useStore } from "@/lib/store";
 import { captureStage, downloadBlob, shareImage } from "@/lib/screenshot";
 import { track } from "@/lib/analytics";
 import Dialog from "@/components/ui/Dialog";
-import { Group, Toggle } from "@/components/ui/controls";
+import { Button } from "@/components/ui/Button";
+import { FormField, Input } from "@/components/ui/Field";
+import { Switch } from "@/components/ui/Switch";
 
 export default function SharePanel() {
   const setPanel = useStore((s) => s.setPanel);
@@ -44,7 +46,7 @@ export default function SharePanel() {
       setCopied(true);
       setTimeout(() => setCopied(false), 1600);
     } catch {
-      setNote("copy failed — select the link and copy it by hand.");
+      setNote("Copying failed. Select the link and copy it by hand.");
     }
   }
 
@@ -66,7 +68,7 @@ export default function SharePanel() {
       const filename = `${(wardrobe!.title || "wardrobe").replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.png`;
       if (mode === "save" || !(await shareImage(blob, filename, wardrobe!.title))) downloadBlob(blob, filename);
     } catch {
-      setNote("couldn't make a screenshot — try again.");
+      setNote("Couldn't make a picture of the canvas. Try again.");
     } finally {
       setShooting(false);
     }
@@ -74,103 +76,100 @@ export default function SharePanel() {
 
   return (
     <Dialog title="Share" variant="sheet" onClose={close}>
-      <p className="mt-1 text-[11px] lowercase text-ink-soft">sharing is per wardrobe — this is {wardrobe.title}.</p>
+      <p className="text-caption text-ink-soft">
+        Sharing is set for each wardrobe. This is <span className="cap-first inline-block font-medium text-ink">{wardrobe.title}</span>.
+      </p>
 
-      <Group label="share link">
-        <Toggle
+      <FormField label="Share link" className="mt-6">
+        <Switch
           on={shared}
           disabled={busy}
           onChange={(v) =>
             run(async () => {
               await setShare(v);
               if (v) track("wardrobe_shared");
-            }, "couldn't update sharing — try again.")
+            }, "Couldn't update sharing. Try again.")
           }
-          label={shared ? "anyone with the link can peek (read-only)." : "off — this wardrobe is private."}
+          label={shared ? "Anyone with the link can look, but not change anything." : "Off. This wardrobe is private."}
         />
         {shared && (
           <div className="mt-3 space-y-2">
-            <input
-              readOnly
-              aria-label="share link"
-              value={link}
-              onFocus={(e) => e.target.select()}
-              className="w-full rounded-lg border border-rule bg-ground/40 px-3 py-2 text-base outline-none sm:text-xs"
-            />
+            <Input readOnly aria-label="Share link" value={link} onFocus={(e) => e.target.select()} className="font-mono" />
             <div className="flex gap-2">
-              <button onClick={copy} className="flex-1 rounded-full bg-ink px-3 py-2 text-xs lowercase text-panel hover:opacity-90">
-                {copied ? "copied ✦" : "copy link"}
-              </button>
-              <button onClick={shareLink} className="flex-1 rounded-full border border-rule px-3 py-2 text-xs lowercase hover:bg-ink/5">
-                share…
-              </button>
+              <Button variant="primary" className="flex-1" onClick={copy}>
+                {copied ? "Copied" : "Copy link"}
+              </Button>
+              <Button className="flex-1" onClick={shareLink}>
+                Share…
+              </Button>
             </div>
             <button
               disabled={busy}
-              onClick={() => run(rotateShare, "couldn't make a new link — try again.")}
-              className="text-[11px] lowercase text-ink-soft underline underline-offset-4 hover:text-ink disabled:opacity-40"
+              onClick={() => run(rotateShare, "Couldn't make a new link. Try again.")}
+              className="text-caption text-ink-soft underline underline-offset-4 hover:text-ink disabled:opacity-40"
             >
-              make a new link (the old one stops working)
+              Make a new link (the old one stops working)
             </button>
           </div>
         )}
-      </Group>
+      </FormField>
 
       {shared && (
-        <Group label="show item details">
-          <Toggle
+        <FormField label="Item details" className="mt-6">
+          <Switch
             on={!!wardrobe.shareDetails}
             onChange={(v) => setShareDetails(v)}
-            label={wardrobe.shareDetails ? "viewers can tap items to see name, brand & price." : "off — viewers only see the pictures."}
+            label={wardrobe.shareDetails ? "Viewers can open an item to see its name, brand and price." : "Off. Viewers only see the pictures."}
           />
-        </Group>
+        </FormField>
       )}
 
       {shared && sections && sections.length > 0 && (
-        <Group label="sections to include">
-          <div className="mb-2 flex gap-2">
-            <button onClick={() => setSectionsShared(true)} className="rounded-full border border-rule px-2.5 py-1 text-[11px] lowercase hover:bg-ink/5">
-              everything
-            </button>
-            <button onClick={() => setSectionsShared(false)} className="rounded-full border border-rule px-2.5 py-1 text-[11px] lowercase hover:bg-ink/5">
-              none
-            </button>
+        <FormField label="Sections to include" className="mt-6">
+          <div className="mb-3 flex gap-2">
+            <Button size="sm" onClick={() => setSectionsShared(true)}>
+              All
+            </Button>
+            <Button size="sm" onClick={() => setSectionsShared(false)}>
+              None
+            </Button>
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {sections.map((s) => (
-              <Toggle
+              <Switch
                 key={s.id}
                 on={s.shared !== false}
                 onChange={(v) => updateSection(s.id, { shared: v })}
-                label={`${s.name}${s.count ? ` · ${s.count}` : ""}`}
+                label={
+                  <>
+                    <span className="cap-first inline-block text-ink">{s.name}</span>
+                    {s.count ? <span className="label-caps tabular ml-2 text-ink-faint">{s.count}</span> : null}
+                  </>
+                }
               />
             ))}
           </div>
-          <p className="mt-2 text-[11px] lowercase text-ink-soft">unsorted items are always visible while sharing is on.</p>
-        </Group>
+          <p className="mt-3 text-caption text-ink-soft">Unsorted items always show while sharing is on.</p>
+        </FormField>
       )}
 
-      <Group label="screenshot">
-        <p className="mb-2 text-xs lowercase text-ink-soft">snap the canvas as an image to share or save.</p>
+      <FormField label="Picture" className="mt-6">
+        <p className="mb-2 text-caption text-ink-soft">Save the canvas as an image to share or keep.</p>
         <div className="flex gap-2">
-          <button
-            onClick={() => snapshot("share")}
-            disabled={shooting}
-            className="flex-1 rounded-full bg-ink px-3 py-2 text-xs lowercase text-panel hover:opacity-90 disabled:opacity-50"
-          >
-            {shooting ? "snapping…" : "share image"}
-          </button>
-          <button
-            onClick={() => snapshot("save")}
-            disabled={shooting}
-            className="flex-1 rounded-full border border-rule px-3 py-2 text-xs lowercase hover:bg-ink/5 disabled:opacity-50"
-          >
-            save .png
-          </button>
+          <Button className="flex-1" onClick={() => snapshot("share")} disabled={shooting}>
+            {shooting ? "Working…" : "Share image"}
+          </Button>
+          <Button className="flex-1" onClick={() => snapshot("save")} disabled={shooting}>
+            Save PNG
+          </Button>
         </div>
-      </Group>
+      </FormField>
 
-      {note && <p className="mt-4 text-xs lowercase text-blush" role="alert">{note}</p>}
+      {note && (
+        <p className="mt-4 text-caption text-danger" role="alert">
+          {note}
+        </p>
+      )}
     </Dialog>
   );
 }

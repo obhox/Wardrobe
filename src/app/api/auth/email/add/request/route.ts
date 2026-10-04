@@ -20,10 +20,10 @@ export async function POST(req: NextRequest) {
 
   const parsed = schema.safeParse(await readJson(req));
   if (!parsed.success || !isValidEmail(parsed.data.email)) {
-    return error("that email doesn't look right", 400);
+    return error("That email doesn't look right.", 400);
   }
   const email = normalizeEmail(parsed.data.email);
-  if (email === me.email) return error("that email is already on your wardrobe", 409);
+  if (email === me.email) return error("That email is already on your account.", 409);
 
   const rate = await canSendMail(email, clientIp(req));
   if (!rate.allowed) return tooMany(rate.retryAfterMs);
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       await sendMail({ to: email, ...verifyEmailCodeEmail(code) });
     } catch (e) {
       console.error("[email:add:request] mail failed", e instanceof Error ? e.message : e);
-      return error("couldn't send the email — try again in a moment", 502);
+      return error("Couldn't send the email. Try again in a moment.", 502);
     }
   }
   return json({ sent: true });

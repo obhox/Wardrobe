@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
   if (!wardrobeId) return notFound();
 
   const src = req.nextUrl.searchParams.get("sourceUrl")?.trim();
-  if (!src) return error("missing sourceUrl", 400);
+  if (!src) return error("Missing sourceUrl.", 400);
 
   const items = await prisma.item.findMany({
     where: { wardrobe: { ownerId: user.id }, sourceUrl: src },
@@ -54,12 +54,12 @@ export async function POST(req: NextRequest) {
 
   const parsed = create.safeParse(body);
   if (!parsed.success) {
-    return error("invalid input", 400, { detail: parsed.error.flatten().fieldErrors });
+    return error("That doesn't look right. Check it and try again.", 400, { detail: parsed.error.flatten().fieldErrors });
   }
   const rate = await hit(`items:${user.id}`, LIMITS.uploadPerUser);
   if (!rate.allowed) return tooMany(rate.retryAfterMs);
   if ((await prisma.item.count({ where: { wardrobeId } })) >= MAX_ITEMS_PER_WARDROBE) {
-    return error("this wardrobe is full — start another one", 400);
+    return error("This wardrobe is full. Start another one.", 400);
   }
 
   const data = parsed.data;

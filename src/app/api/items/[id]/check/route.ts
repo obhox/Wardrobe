@@ -15,7 +15,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
   const item = await prisma.item.findFirst({ where: { id, wardrobe: { ownerId: user.id } } });
   if (!item) return notFound();
-  if (!item.sourceUrl) return error("this item has no product link to check", 400);
+  if (!item.sourceUrl) return error("This item has no product link to check.", 400);
 
   const rate = await hit(`price-check:${user.id}`, { limit: 20, windowMs: 10 * 60 * 1000 });
   if (!rate.allowed) return tooMany(rate.retryAfterMs);

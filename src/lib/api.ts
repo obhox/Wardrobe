@@ -13,10 +13,10 @@ async function jsonOrThrow(res: Response) {
     throw new ApiError(
       data?.error ||
         (res.status === 429
-          ? "too many tries — wait a moment"
+          ? "Too many tries. Wait a moment."
           : res.status >= 500
-            ? "something went wrong on our side — try again"
-            : `request failed (${res.status})`),
+            ? "Something went wrong on our side. Try again."
+            : `Request failed (${res.status})`),
       res.status
     );
   }

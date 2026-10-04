@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   const me = await getCurrentUser();
   if (!me) return unauthorized();
   const parsed = schema.safeParse(await readJson(req));
-  if (!parsed.success) return error("invalid input", 400);
+  if (!parsed.success) return error("That doesn't look right. Check it and try again.", 400);
 
   const key = `combo-change:${me.id}`;
   const backoff = await failed(key);
@@ -31,11 +31,11 @@ export async function POST(req: NextRequest) {
     const ok = await verifySecret(user.combinationHash, normalizeCombination(parsed.data.current ?? ""));
     if (!ok) {
       await fail(key);
-      return error("your current combination didn't match", 401);
+      return error("Your current combination didn't match.", 401);
     }
   }
   if (!combinationStrengthOk(parsed.data.newPhrase)) {
-    return error("combination too weak — need 4 words and a number", 400);
+    return error("That combination is too weak. It needs 4 words and a number.", 400);
   }
   const normalized = normalizeCombination(parsed.data.newPhrase);
   await prisma.user.update({

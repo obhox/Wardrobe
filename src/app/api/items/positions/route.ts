@@ -26,7 +26,7 @@ export async function PATCH(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return unauthorized();
   const parsed = schema.safeParse(await readJson(req));
-  if (!parsed.success) return error("invalid input", 400);
+  if (!parsed.success) return error("That doesn't look right. Check it and try again.", 400);
 
   const results = await prisma.$transaction(
     parsed.data.positions.map((p) =>

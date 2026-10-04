@@ -47,7 +47,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 
   const parsed = patch.safeParse(await readJson(req));
   if (!parsed.success) {
-    return error("invalid input", 400, { detail: parsed.error.flatten().fieldErrors });
+    return error("That doesn't look right. Check it and try again.", 400, { detail: parsed.error.flatten().fieldErrors });
   }
   const data: Record<string, unknown> = { ...parsed.data };
   delete data.relabelCurrency;

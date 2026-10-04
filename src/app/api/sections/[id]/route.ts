@@ -21,7 +21,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   if (!user) return unauthorized();
   const { id } = await params;
   const parsed = patch.safeParse(await readJson(req));
-  if (!parsed.success) return error("invalid input", 400);
+  if (!parsed.success) return error("That doesn't look right. Check it and try again.", 400);
 
   const { count } = await prisma.section.updateMany({
     where: { id, wardrobe: { ownerId: user.id } },

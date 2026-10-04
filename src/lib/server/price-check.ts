@@ -112,7 +112,7 @@ export async function checkItemPrice(
             itemId: item.id,
             kind: hitTarget ? "target_hit" : "price_drop",
             body: hitTarget
-              ? `${item.name} hit your target — now ${now$}`
+              ? `${item.name} hit your target price, now ${now$}`
               : `${item.name} dropped to ${now$}${was$ ? ` (was ${was$})` : ""}`,
           },
         });
@@ -187,6 +187,9 @@ export async function runPriceChecks({
   };
 }
 
+// item names are stored as typed, often lowercase; a line of mail opens with a capital
+const capFirst = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
 // One email per person per day at most, bundling their unsent notices.
 async function sendDigests(): Promise<number> {
   if (!mailerConfigured) return 0;
@@ -209,12 +212,12 @@ async function sendDigests(): Promise<number> {
     });
     if (recent) continue;
     const to = notes[0].user.recoveryEmail!;
-    const lines = notes.map((n) => `✦ ${n.body}`).join("\n");
+    const lines = notes.map((n) => `- ${capFirst(n.body)}`).join("\n");
     try {
       await sendMail({
         to,
-        subject: notes.length === 1 ? `✦ ${notes[0].body}` : `✦ ${notes.length} price drops on your wishlist`,
-        text: `${lines}\n\nopen your wardrobe to take a look.\n\nturn alerts off for an item from its detail card.\n\n${brand.wordmark}`,
+        subject: notes.length === 1 ? capFirst(notes[0].body) : `${notes.length} price drops on your wishlist`,
+        text: `${lines}\n\nOpen your wardrobe to take a look.\n\nYou can turn alerts off for an item from its details.\n\n${brand.wordmark}`,
       });
       await prisma.notification.updateMany({
         where: { id: { in: notes.map((n) => n.id) } },

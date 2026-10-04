@@ -24,7 +24,7 @@ const MAX_ATTEMPTS = 5;
 
 export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(await readJson(req));
-  if (!parsed.success) return error("invalid input", 400);
+  if (!parsed.success) return error("That doesn't look right. Check it and try again.", 400);
   const handle = normalizeHandle(parsed.data.handle);
 
   const ipRate = await hit(`auth:ip:${clientIp(req)}`, LIMITS.authIp);
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   if (!daily.allowed) return tooMany(daily.retryAfterMs);
 
   if (!combinationStrengthOk(parsed.data.newPhrase)) {
-    return error("new combination too weak — need 4 words and a number", 400);
+    return error("The new combination is too weak. It needs 4 words and a number.", 400);
   }
 
   const user = await prisma.user.findUnique({ where: { handle } });
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     if (user && live) {
       await prisma.user.update({ where: { id: user.id }, data: { recoveryAttempts: { increment: 1 } } });
     }
-    return error("that code didn't work — request a new one", 401);
+    return error("That code didn't work. Request a new one.", 401);
   }
 
   const normalized = normalizeCombination(parsed.data.newPhrase);
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
       recoveryAttempts: 0,
     },
   });
-  if (count !== 1) return error("that code didn't work — request a new one", 401);
+  if (count !== 1) return error("That code didn't work. Request a new one.", 401);
 
   // a reset signs every other device out
   await prisma.session.deleteMany({ where: { userId: user.id } });

@@ -10,16 +10,16 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   const body = (await readJson(req)) as { id?: string } | null;
-  if (!body?.id || typeof body.id !== "string") return error("bad request", 400);
+  if (!body?.id || typeof body.id !== "string") return error("Bad request.", 400);
 
   const challenge = await takeChallenge("authenticate");
-  if (!challenge) return error("that took too long — try again", 400);
+  if (!challenge) return error("That took too long. Try again.", 400);
 
   const passkey = await prisma.passkey.findUnique({
     where: { credentialId: body.id },
     include: { user: true },
   });
-  if (!passkey) return error("this passkey isn't on any wardrobe", 401);
+  if (!passkey) return error("This passkey isn't registered to an account.", 401);
 
   let verification;
   try {
@@ -37,9 +37,9 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch {
-    return error("the passkey couldn't be verified", 400);
+    return error("The passkey couldn't be verified.", 400);
   }
-  if (!verification.verified) return error("the passkey couldn't be verified", 401);
+  if (!verification.verified) return error("The passkey couldn't be verified.", 401);
 
   await prisma.passkey.update({
     where: { id: passkey.id },

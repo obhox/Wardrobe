@@ -131,7 +131,7 @@ export const useStore = create<State>((set, get) => {
       pendingDeletes.delete(key);
       api.del(url).catch((e) => {
         restore();
-        get().toast(errMessage(e, "couldn't remove that — it's back"), { tone: "error" });
+        get().toast(errMessage(e, "Couldn't remove that, so it's back."), { tone: "error" });
       });
     }, UNDO_MS);
     pendingDeletes.set(key, { url, timer });
@@ -227,7 +227,7 @@ export const useStore = create<State>((set, get) => {
           // server may normalise (stored image URLs, lowest price…)
           get().replaceItem(saved);
         },
-        "couldn't save that change"
+        "Couldn't save that change."
       ),
 
     replaceItem: (item) => {
@@ -263,7 +263,7 @@ export const useStore = create<State>((set, get) => {
             },
           });
         },
-        `removed ${item.name}`
+        `Removed ${item.name}`
       );
     },
 
@@ -294,11 +294,11 @@ export const useStore = create<State>((set, get) => {
           ),
         }),
         () => api.patch(`/api/items/${id}`, { wardrobeId }),
-        "couldn't move that item"
+        "Couldn't move that item."
       );
       set({ selectedId: null });
       const dest = get().payload?.wardrobes.find((w) => w.id === wardrobeId);
-      get().toast(`moved ${item.name} to ${dest?.title ?? "another wardrobe"}`);
+      get().toast(`Moved ${item.name} to ${dest?.title ?? "another wardrobe"}`);
     },
 
     // ---------------- sections ----------------
@@ -314,7 +314,7 @@ export const useStore = create<State>((set, get) => {
         const p = get().payload;
         if (p) set({ payload: { ...p, sections: [...p.sections, { ...created, count: 0 }] } });
       } catch (e) {
-        get().toast(errMessage(e, "couldn't add that section"), { tone: "error" });
+        get().toast(errMessage(e, "Couldn't add that section."), { tone: "error" });
       }
     },
 
@@ -322,7 +322,7 @@ export const useStore = create<State>((set, get) => {
       optimistic(
         (p) => ({ ...p, sections: p.sections.map((s) => (s.id === id ? { ...s, ...patch } : s)) }),
         () => api.patch(`/api/sections/${id}`, patch),
-        "couldn't save that section"
+        "Couldn't save that section."
       ),
 
     reorderSections: (ids) =>
@@ -333,7 +333,7 @@ export const useStore = create<State>((set, get) => {
           return { ...p, sections };
         },
         () => api.patch("/api/sections", { order: ids, wardrobeId: wid() }),
-        "couldn't reorder sections"
+        "Couldn't reorder the sections."
       ),
 
     deleteSection: (id) => {
@@ -357,7 +357,7 @@ export const useStore = create<State>((set, get) => {
           const back = cur.items.map((it) => (memberIds.has(it.id) && !it.sectionId ? { ...it, sectionId: id } : it));
           set({ payload: withItems({ ...cur, sections: restored }, back) });
         },
-        `removed section ${section.name} — its items are unsorted`
+        `Removed the section ${section.name}. Its items are now unsorted.`
       );
     },
 
@@ -383,7 +383,7 @@ export const useStore = create<State>((set, get) => {
       await optimistic(
         (cur) => ({ ...cur, wardrobe: { ...cur.wardrobe, shareDetails: details } }),
         () => api.post("/api/wardrobe/share", { details, wardrobeId: wid() }),
-        "couldn't update sharing"
+        "Couldn't update sharing."
       );
     },
 
@@ -393,7 +393,7 @@ export const useStore = create<State>((set, get) => {
       await optimistic(
         (cur) => ({ ...cur, sections: cur.sections.map((s) => ({ ...s, shared })) }),
         () => Promise.all(p.sections.map((s) => api.patch(`/api/sections/${s.id}`, { shared }))),
-        "couldn't update sections"
+        "Couldn't update the sections."
       );
     },
 
@@ -401,7 +401,7 @@ export const useStore = create<State>((set, get) => {
       optimistic(
         (p) => ({ ...p, wardrobe: { ...p.wardrobe, theme } }),
         () => api.patch(`/api/wardrobes/${wid()}`, { theme }),
-        "couldn't save the look"
+        "Couldn't save the theme."
       ),
 
     setTitle: (patch) =>
@@ -416,7 +416,7 @@ export const useStore = create<State>((set, get) => {
           ),
         }),
         () => api.patch(`/api/wardrobes/${wid()}`, patch),
-        "couldn't save the title"
+        "Couldn't save the title."
       ),
 
     // The board flows items at render time (see Canvas), so switching to it
@@ -425,14 +425,14 @@ export const useStore = create<State>((set, get) => {
       optimistic(
         (p) => ({ ...p, wardrobe: { ...p.wardrobe, layoutMode } }),
         () => api.patch(`/api/wardrobes/${wid()}`, { layoutMode }),
-        "couldn't save the layout"
+        "Couldn't save the layout."
       ),
 
     setSort: (sortKey) =>
       optimistic(
         (p) => ({ ...p, wardrobe: { ...p.wardrobe, sortKey } }),
         () => api.patch(`/api/wardrobes/${wid()}`, { sortKey }),
-        "couldn't save the sort"
+        "Couldn't save the sort order."
       ),
 
     tidyUp: () => {
@@ -453,7 +453,7 @@ export const useStore = create<State>((set, get) => {
       });
       for (const id of placements.keys()) dirtyPositions.add(id);
       schedulePositions(0);
-      get().toast("tidied up", {
+      get().toast("Tidied up", {
         undo: () => {
           const cur = get().payload;
           if (!cur) return;
@@ -509,7 +509,7 @@ export const useStore = create<State>((set, get) => {
       if (positions.length) await api.patch("/api/items/positions", { positions }, { keepalive: true });
     } catch {
       for (const id of ids) dirtyPositions.add(id); // retry with the next save
-      get().toast("couldn't save positions — will retry", { tone: "error" });
+      get().toast("Couldn't save positions. Will retry.", { tone: "error" });
     } finally {
       set({ saving: false });
     }

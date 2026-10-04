@@ -56,10 +56,10 @@ export async function consumeCode(email: string, code: string): Promise<CheckRes
 export function codeError(r: CheckResult): { message: string; status: number } {
   switch (r) {
     case "limited":
-      return { message: "too many tries today — request a new code tomorrow", status: 429 };
+      return { message: "Too many tries today. Request a new code tomorrow.", status: 429 };
     case "wrong":
-      return { message: "that code didn't match", status: 401 };
+      return { message: "That code didn't match.", status: 401 };
     default:
-      return { message: "that code expired — request a new one", status: 401 };
+      return { message: "That code expired. Request a new one.", status: 401 };
   }
 }

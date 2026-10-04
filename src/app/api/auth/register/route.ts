@@ -26,7 +26,7 @@ const schema = z.object({
 
 export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(await readJson(req));
-  if (!parsed.success) return error("invalid input", 400);
+  if (!parsed.success) return error("That doesn't look right. Check it and try again.", 400);
   const { phrase, displayName } = parsed.data;
 
   const ipRate = await hit(`register:ip:${clientIp(req)}`, { limit: 10, windowMs: 60 * 60 * 1000 });
@@ -35,12 +35,12 @@ export async function POST(req: NextRequest) {
   if (!authRate.allowed) return tooMany(authRate.retryAfterMs);
 
   if (!combinationStrengthOk(phrase)) {
-    return error("combination too weak — need 4 words and a number", 400);
+    return error("That combination is too weak. It needs 4 words and a number.", 400);
   }
 
   const handle = normalizeHandle(parsed.data.handle);
   if (!isValidHandle(handle)) {
-    return error("handle must be 2–30 letters, numbers or hyphens", 400);
+    return error("A handle must be 2–30 letters, numbers or hyphens.", 400);
   }
 
   const normalized = normalizeCombination(phrase);
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
     await createSession(user.id);
     return json({ handle: user.handle });
   } catch (e) {
-    if (isUniqueViolation(e)) return error("that handle is taken — pick another", 409);
+    if (isUniqueViolation(e)) return error("That handle is taken. Pick another.", 409);
     throw e;
   }
 }

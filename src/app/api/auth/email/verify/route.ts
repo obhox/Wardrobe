@@ -30,7 +30,7 @@ async function uniqueHandle(): Promise<string> {
 
 export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(await readJson(req));
-  if (!parsed.success || !isValidEmail(parsed.data.email)) return error("invalid input", 400);
+  if (!parsed.success || !isValidEmail(parsed.data.email)) return error("That doesn't look right. Check it and try again.", 400);
   const email = normalizeEmail(parsed.data.email);
 
   const ipRate = await hit(`auth:ip:${clientIp(req)}`, LIMITS.authIp);
@@ -71,5 +71,5 @@ export async function POST(req: NextRequest) {
       }
     }
   }
-  return error("couldn't make your wardrobe — try again", 500);
+  return error("Couldn't create your wardrobe. Try again.", 500);
 }

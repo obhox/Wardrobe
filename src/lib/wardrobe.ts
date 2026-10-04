@@ -147,24 +147,24 @@ export async function loadWardrobe(
 // Starter sections for a brand-new wardrobe, by template.
 export const TEMPLATES: Record<string, { title: string; icon: string; tagline: string; sections: [string, string][] }> = {
   closet: {
-    title: "my wardrobe",
+    title: "My wardrobe",
     icon: "✦",
-    tagline: "everything, arranged just so.",
-    sections: [["tops", "cobalt"], ["bottoms", "olive"], ["shoes", "terracotta"], ["bags", "honey"]],
+    tagline: "Everything, arranged just so.",
+    sections: [["Tops", "cobalt"], ["Bottoms", "olive"], ["Shoes", "terracotta"], ["Bags", "honey"]],
   },
   wishlist: {
-    title: "wishlist",
+    title: "Wishlist",
     icon: "♡",
-    tagline: "things i'm keeping an eye on.",
-    sections: [["soon", "blush"], ["someday", "honey"]],
+    tagline: "Things I'm keeping an eye on.",
+    sections: [["Soon", "blush"], ["Someday", "honey"]],
   },
   gear: {
-    title: "gear",
+    title: "Gear",
     icon: "⚙",
-    tagline: "the kit.",
-    sections: [["tech", "cobalt"], ["outdoor", "olive"], ["tools", "brass"]],
+    tagline: "The kit.",
+    sections: [["Tech", "cobalt"], ["Outdoor", "olive"], ["Tools", "brass"]],
   },
-  blank: { title: "new wardrobe", icon: "○", tagline: "", sections: [] },
+  blank: { title: "New wardrobe", icon: "○", tagline: "", sections: [] },
 };
 
 export function wardrobeCreateData(template: keyof typeof TEMPLATES, opts: { title?: string; theme?: string; order?: number } = {}) {

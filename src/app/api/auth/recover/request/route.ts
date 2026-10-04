@@ -15,7 +15,7 @@ const schema = z.object({ handle: z.string().min(1).max(40) });
 
 export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(await readJson(req));
-  if (!parsed.success) return error("invalid input", 400);
+  if (!parsed.success) return error("That doesn't look right. Check it and try again.", 400);
 
   const handle = normalizeHandle(parsed.data.handle);
   const rate = await canSendMail(`handle:${handle}`, clientIp(req));
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
       await sendMail({ to: user.recoveryEmail, ...recoveryCodeEmail(user.handle, code) });
     } catch (e) {
       console.error("[recover:request] mail failed", e instanceof Error ? e.message : e);
-      return error("couldn't send the email — try again in a moment", 502);
+      return error("Couldn't send the email. Try again in a moment.", 502);
     }
   }
   return json({ sent: true });

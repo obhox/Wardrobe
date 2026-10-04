@@ -24,7 +24,7 @@ export async function PATCH(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return unauthorized();
   const parsed = patch.safeParse(await readJson(req));
-  if (!parsed.success) return error("invalid input", 400);
+  if (!parsed.success) return error("That doesn't look right. Check it and try again.", 400);
   await prisma.user.update({ where: { id: user.id }, data: parsed.data });
   return json({ ok: true });
 }

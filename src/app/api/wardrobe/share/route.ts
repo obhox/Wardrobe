@@ -15,7 +15,7 @@ const schema = z
     rotate: z.boolean().optional(), // issue a new link; the old one stops working
   })
   .refine((b) => b.enabled !== undefined || b.details !== undefined || b.rotate, {
-    message: "nothing to update",
+    message: "Nothing to update.",
   });
 
 function makeShareCode() {
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   if (!wardrobeId) return notFound();
 
   const parsed = schema.safeParse(body);
-  if (!parsed.success) return error("invalid input", 400);
+  if (!parsed.success) return error("That doesn't look right. Check it and try again.", 400);
   const { enabled, details, rotate } = parsed.data;
 
   const current = await prisma.wardrobe.findUnique({

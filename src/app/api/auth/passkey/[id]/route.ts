@@ -13,7 +13,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   // never remove the last way in
   const others = await prisma.passkey.count({ where: { userId: user.id, NOT: { id } } });
   if (!user.hasCombination && !user.email && others === 0) {
-    return error("this is your only way in — add an email or combination first", 400);
+    return error("This is your only way in. Add an email or a combination first.", 400);
   }
   const { count } = await prisma.passkey.deleteMany({ where: { id, userId: user.id } });
   return count ? json({ ok: true }) : notFound();

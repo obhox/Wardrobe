@@ -17,17 +17,17 @@ export async function POST(req: NextRequest) {
   if (!rate.allowed) return tooMany(rate.retryAfterMs);
 
   const len = Number(req.headers.get("content-length") ?? 0);
-  if (len > MAX_UPLOAD_BYTES + 64 * 1024) return error("that photo is too big (12 MB max)", 413);
+  if (len > MAX_UPLOAD_BYTES + 64 * 1024) return error("That photo is too big (12 MB at most).", 413);
 
   let form: FormData;
   try {
     form = await req.formData();
   } catch {
-    return error("no photo received", 400);
+    return error("No photo received.", 400);
   }
   const file = form.get("file");
-  if (!(file instanceof Blob)) return error("no photo received", 400);
-  if (file.size > MAX_UPLOAD_BYTES) return error("that photo is too big (12 MB max)", 413);
+  if (!(file instanceof Blob)) return error("No photo received.", 400);
+  if (file.size > MAX_UPLOAD_BYTES) return error("That photo is too big (12 MB at most).", 413);
   const kind = form.get("kind") === "cutout" ? "cutout" : "original";
 
   try {
@@ -40,6 +40,6 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     if (e instanceof ImageError) return error(e.message, 415);
     console.error("[upload] failed", e);
-    return error("couldn't save that photo — try again", 500);
+    return error("Couldn't save that photo. Try again.", 500);
   }
 }

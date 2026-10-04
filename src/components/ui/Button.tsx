@@ -23,10 +23,15 @@ const ICON_SIZE: Record<Size, string> = { sm: "h-8 w-8", md: "h-10 w-10", lg: "h
 
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: Size };
 
+/** The button's classes, for a link that should look like one. */
+export function buttonClass(variant: Variant = "secondary", size: Size = "md", className?: string) {
+  return cx(BASE, VARIANT[variant], SIZE[size], className);
+}
+
 /** The one button. `primary` for the main action of a view, `secondary` for
  *  the rest, `ghost` for quiet toolbar actions, `danger` to remove things. */
 export function Button({ variant = "secondary", size = "md", className, type = "button", ...props }: ButtonProps) {
-  return <button type={type} {...props} className={cx(BASE, VARIANT[variant], SIZE[size], className)} />;
+  return <button type={type} {...props} className={buttonClass(variant, size, className)} />;
 }
 
 /** A square button holding only an icon; `label` names it for screen readers. */

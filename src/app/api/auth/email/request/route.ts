@@ -15,7 +15,7 @@ const schema = z.object({ email: z.string().min(3).max(254) });
 export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(await readJson(req));
   if (!parsed.success || !isValidEmail(parsed.data.email)) {
-    return error("that email doesn't look right", 400);
+    return error("That email doesn't look right.", 400);
   }
   const email = normalizeEmail(parsed.data.email);
 
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     await sendMail({ to: email, ...magicCodeEmail(code) });
   } catch (e) {
     console.error("[email:request] mail failed", e instanceof Error ? e.message : e);
-    return error("couldn't send the email — try again in a moment", 502);
+    return error("Couldn't send the email. Try again in a moment.", 502);
   }
   return json({ sent: true });
 }

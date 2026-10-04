@@ -1,4 +1,5 @@
 "use client";
+import { Target, TrendingDown } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store";
@@ -88,13 +89,17 @@ export default function Notifications() {
                         if (here) select(n.itemId);
                         setOpen(false);
                       }}
-                      className="cap-first w-full rounded-control px-2 py-1.5 text-left text-caption hover:bg-ink/4 disabled:cursor-default disabled:hover:bg-transparent"
+                      className="w-full rounded-control px-2 py-1.5 text-left text-caption hover:bg-ink/4 disabled:cursor-default disabled:hover:bg-transparent"
                     >
-                      <span className={n.readAt ? "text-ink-soft" : ""}>
-                        {n.kind === "target_hit" ? "◎ " : "↓ "}
-                        {n.body}
+                      <span className={"flex items-start gap-1.5 " + (n.readAt ? "text-ink-soft" : "")}>
+                        {n.kind === "target_hit" ? (
+                          <Target aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                        ) : (
+                          <TrendingDown aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                        )}
+                        <span className="cap-first">{n.body}</span>
                       </span>
-                      <span className="label-caps block text-ink-faint">
+                      <span className="label-caps mt-0.5 block pl-5 text-ink-faint">
                         {new Date(n.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
                       </span>
                     </button>

@@ -38,7 +38,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   if (!user) return unauthorized();
   const { id } = await params;
   const parsed = patch.safeParse(await readJson(req));
-  if (!parsed.success) return error("invalid input", 400);
+  if (!parsed.success) return error("That doesn't look right. Check it and try again.", 400);
   const { count } = await prisma.wardrobe.updateMany({
     where: { id, ownerId: user.id },
     data: parsed.data,
@@ -59,10 +59,10 @@ export async function DELETE(req: NextRequest, { params }: Ctx) {
   });
   if (!w) return notFound();
   if ((body?.confirm ?? "").trim().toLowerCase() !== w.title.trim().toLowerCase()) {
-    return error("type the wardrobe's name to confirm", 400);
+    return error("Type the wardrobe's name to confirm.", 400);
   }
   const count = await prisma.wardrobe.count({ where: { ownerId: user.id } });
-  if (count <= 1) return error("that's your only wardrobe — make another first", 400);
+  if (count <= 1) return error("That's your only wardrobe. Create another first.", 400);
 
   await prisma.wardrobe.delete({ where: { id } });
   await deleteUrls(w.items.flatMap((i) => [i.imageUrl, i.cutoutUrl]));

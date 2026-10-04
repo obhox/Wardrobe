@@ -46,13 +46,13 @@ await cp(path.join(root, "static"), dist, { recursive: true });
 const icons = { 16: "icons/icon-16.png", 32: "icons/icon-32.png", 48: "icons/icon-48.png", 128: "icons/icon-128.png" };
 const manifest = {
   manifest_version: 3,
-  name: dev ? `${brand.name} (dev)` : `${brand.name} — save to closet`,
+  name: dev ? `${brand.name} (dev)` : `${brand.name} — Save to closet`,
   short_name: brand.name,
   version: VERSION,
-  description: `save anything you're looking at into your ${brand.name} — photo, name, brand and price, picked up from the page in one click.`,
+  description: "Save anything you're looking at into your wardrobe: photo, name, brand and price, picked up from the page in one click.",
   homepage_url: PROD_SERVER,
   icons,
-  action: { default_title: `save to ${brand.name}`, default_popup: "popup.html", default_icon: icons },
+  action: { default_title: `Save to ${brand.name}`, default_popup: "popup.html", default_icon: icons },
   background: { service_worker: "background.js" },
   permissions: ["activeTab", "scripting", "storage", "contextMenus"],
   host_permissions: [`${server}/*`],
@@ -60,7 +60,7 @@ const manifest = {
   commands: {
     _execute_action: {
       suggested_key: { default: "Alt+Shift+W" },
-      description: `save this page to ${brand.name}`,
+      description: `Save this page to ${brand.name}`,
     },
   },
 };

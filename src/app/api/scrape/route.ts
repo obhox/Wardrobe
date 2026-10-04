@@ -18,11 +18,11 @@ export async function POST(req: NextRequest) {
 
   const parsed = schema.safeParse(await readJson(req));
   const url = parsed.success ? extractUrl(parsed.data.url) : null;
-  if (!url) return json({ ok: false, error: "invalid url" }, 400);
+  if (!url) return json({ ok: false, error: "That isn't a valid link." }, 400);
   try {
     assertPublicUrl(url);
   } catch {
-    return json({ ok: false, error: "that link can't be read" }, 400);
+    return json({ ok: false, error: "That link can't be read." }, 400);
   }
 
   const rate = await hit(`fetch:${user.id}`, LIMITS.fetchPerUser);

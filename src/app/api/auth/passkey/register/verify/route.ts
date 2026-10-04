@@ -13,10 +13,10 @@ export async function POST(req: NextRequest) {
   if (!user) return unauthorized();
 
   const body = (await readJson(req)) as { deviceLabel?: unknown } | null;
-  if (!body) return error("bad request", 400);
+  if (!body) return error("Bad request.", 400);
 
   const challenge = await takeChallenge("register", user.id);
-  if (!challenge) return error("that took too long — try again", 400);
+  if (!challenge) return error("That took too long. Try again.", 400);
 
   let verification;
   try {
@@ -28,10 +28,10 @@ export async function POST(req: NextRequest) {
       expectedRPID: rpID(),
     });
   } catch {
-    return error("the passkey couldn't be verified", 400);
+    return error("The passkey couldn't be verified.", 400);
   }
   if (!verification.verified || !verification.registrationInfo) {
-    return error("the passkey couldn't be verified", 400);
+    return error("The passkey couldn't be verified.", 400);
   }
 
   const { credential } = verification.registrationInfo;
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     });
     return json({ id: pk.id, deviceLabel: pk.deviceLabel, createdAt: pk.createdAt });
   } catch (e) {
-    if (isUniqueViolation(e)) return error("that passkey is already registered", 409);
+    if (isUniqueViolation(e)) return error("That passkey is already registered.", 409);
     throw e;
   }
 }

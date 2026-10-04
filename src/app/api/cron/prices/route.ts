@@ -12,11 +12,11 @@ export const maxDuration = 60;
 //   curl -fsS -X POST -H "authorization: Bearer $CRON_SECRET" https://<app>/api/cron/prices
 export async function POST(req: NextRequest) {
   const secret = env.cronSecret;
-  if (!secret) return error("price checks aren't configured (set CRON_SECRET)", 503);
+  if (!secret) return error("Price checks aren't configured (set CRON_SECRET).", 503);
   const given = Buffer.from(req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "");
   const want = Buffer.from(secret);
   if (given.length !== want.length || !crypto.timingSafeEqual(given, want)) {
-    return error("unauthorized", 401);
+    return error("Unauthorized.", 401);
   }
   return json(await runPriceChecks());
 }

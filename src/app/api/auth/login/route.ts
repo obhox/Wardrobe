@@ -24,7 +24,7 @@ function legacyNormalize(input: string) {
 
 export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(await readJson(req));
-  if (!parsed.success) return error("add your handle and combination", 400);
+  if (!parsed.success) return error("Enter your handle and combination.", 400);
 
   const handle = normalizeHandle(parsed.data.handle);
   const key = `login:${handle}`;
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
 
   if (!user || !ok) {
     await fail(key);
-    return error("the combination didn't turn — check your handle and combination", 401);
+    return error("That handle and combination don't match.", 401);
   }
 
   await clear(key);

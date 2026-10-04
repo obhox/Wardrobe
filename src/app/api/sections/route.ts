@@ -32,10 +32,10 @@ export async function POST(req: NextRequest) {
   if (!wardrobeId) return notFound();
 
   const parsed = create.safeParse(body);
-  if (!parsed.success) return error("invalid input", 400);
+  if (!parsed.success) return error("That doesn't look right. Check it and try again.", 400);
 
   const agg = await prisma.section.aggregate({ where: { wardrobeId }, _max: { order: true }, _count: true });
-  if (agg._count >= 60) return error("that's a lot of sections — tidy a few first", 400);
+  if (agg._count >= 60) return error("That's the most sections a wardrobe can have. Remove a few first.", 400);
   const section = await prisma.section.create({
     data: { ...parsed.data, wardrobeId, order: (agg._max.order ?? -1) + 1 },
   });
@@ -51,7 +51,7 @@ export async function PATCH(req: NextRequest) {
   if (!user) return unauthorized();
   if (!wardrobeId) return notFound();
   const parsed = reorder.safeParse(body);
-  if (!parsed.success) return error("invalid input", 400);
+  if (!parsed.success) return error("That doesn't look right. Check it and try again.", 400);
   await prisma.$transaction(
     parsed.data.order.map((id, order) =>
       prisma.section.updateMany({ where: { id, wardrobeId }, data: { order } })

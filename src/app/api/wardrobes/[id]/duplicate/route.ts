@@ -18,7 +18,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   });
   if (!src) return notFound();
   const n = await prisma.wardrobe.count({ where: { ownerId: user.id } });
-  if (n >= 20) return error("you can keep up to 20 wardrobes", 400);
+  if (n >= 20) return error("You can keep up to 20 wardrobes.", 400);
 
   const copy = await prisma.wardrobe.create({
     data: {

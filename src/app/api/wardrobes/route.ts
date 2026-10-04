@@ -24,14 +24,14 @@ export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return unauthorized();
   const parsed = create.safeParse(await readJson(req));
-  if (!parsed.success) return error("invalid input", 400);
+  if (!parsed.success) return error("That doesn't look right. Check it and try again.", 400);
 
   const existing = await prisma.wardrobe.aggregate({
     where: { ownerId: user.id },
     _count: true,
     _max: { order: true },
   });
-  if (existing._count >= MAX_WARDROBES) return error(`you can keep up to ${MAX_WARDROBES} wardrobes`, 400);
+  if (existing._count >= MAX_WARDROBES) return error(`You can keep up to ${MAX_WARDROBES} wardrobes.`, 400);
 
   const w = await prisma.wardrobe.create({
     data: {
@@ -54,7 +54,7 @@ export async function PATCH(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return unauthorized();
   const parsed = reorder.safeParse(await readJson(req));
-  if (!parsed.success) return error("invalid input", 400);
+  if (!parsed.success) return error("That doesn't look right. Check it and try again.", 400);
   await prisma.$transaction(
     parsed.data.order.map((id, order) =>
       prisma.wardrobe.updateMany({ where: { id, ownerId: user.id }, data: { order } })

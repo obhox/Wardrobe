@@ -10,7 +10,7 @@ export async function DELETE() {
   if (!me) return unauthorized();
   const passkeys = await prisma.passkey.count({ where: { userId: me.id } });
   if (!me.hasCombination && passkeys === 0) {
-    return error("add a combination or a passkey first — otherwise you'd be locked out", 400);
+    return error("Add a combination or a passkey first, or you'd be locked out.", 400);
   }
   await prisma.user.update({ where: { id: me.id }, data: { recoveryEmail: null } });
   return json({ email: null });

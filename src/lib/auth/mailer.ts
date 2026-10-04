@@ -31,7 +31,7 @@ export async function sendMail(opts: {
 }): Promise<void> {
   if (!mailerConfigured) {
     throw new Error(
-      "email isn't configured — set RESEND_API_KEY (and MAIL_FROM) in .env"
+      "Email isn't configured. Set RESEND_API_KEY (and MAIL_FROM) in .env."
     );
   }
   const { data, error } = await client().emails.send({
@@ -49,79 +49,62 @@ export async function sendMail(opts: {
   console.info(`[mailer] sent to ${opts.to} (id ${data?.id ?? "?"})`);
 }
 
-/** branded recovery-code email (plain + light html). */
+// One look for every code email: the wordmark, a line of context, the code.
+function codeEmail(opts: { subject: string; lead: string; code: string; after: string; ignore: string }) {
+  const text = `${opts.lead}
+
+${opts.code}
+
+${opts.after}
+
+${opts.ignore}
+
+${brand.wordmark}`;
+
+  const html = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:#faf9f6;padding:32px 16px;color:#1a1a18">
+  <div style="max-width:440px;margin:0 auto;background:#ffffff;border:1px solid #e4e2dc;border-radius:16px;padding:28px 26px">
+    <div style="font-family:Georgia,'Times New Roman',serif;font-size:22px">${escapeHtml(brand.wordmark)}</div>
+    <p style="color:#5b5952;font-size:15px;line-height:1.5;margin:16px 0 18px">${escapeHtml(opts.lead)}</p>
+    <div style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:30px;font-weight:600;letter-spacing:.18em;text-align:center;padding:18px;border-radius:10px;background:#f3f1ec">${opts.code}</div>
+    <p style="color:#5b5952;font-size:14px;line-height:1.5;margin:18px 0 0">${escapeHtml(opts.after)}</p>
+    <p style="color:#76736a;font-size:13px;line-height:1.5;margin:12px 0 0">${escapeHtml(opts.ignore)}</p>
+  </div>
+</div>`;
+
+  return { subject: opts.subject, text, html };
+}
+
+/** reset code for someone who lost their combination. */
 export function recoveryCodeEmail(handle: string, code: string) {
-  const text = `your ${brand.name} reset code is ${code}
-
-it unlocks the recovery screen for the next 15 minutes. enter it alongside a
-new combination to get back in.
-
-if this wasn't you, you can ignore this — nothing changes until the code is used.
-
-${brand.wordmark}`;
-
-  const html = `<div style="font-family:ui-monospace,Menlo,monospace;background:#a9c4f5;padding:32px;color:#14161b">
-  <div style="max-width:440px;margin:0 auto;background:#eef2fb;border-radius:18px;padding:28px 26px;box-shadow:0 18px 40px rgba(36,54,96,.28)">
-    <div style="font-size:20px;letter-spacing:-.02em">${brand.wordmark}</div>
-    <p style="color:#3a4150;margin:14px 0 18px">hey ${escapeHtml(handle)} — here's the way back in.</p>
-    <div style="font-size:30px;font-weight:600;letter-spacing:.18em;text-align:center;padding:18px;border:1px solid rgba(20,22,27,.42);border-radius:12px;background:rgba(169,196,245,.35)">${code}</div>
-    <p style="color:#3a4150;font-size:13px;margin-top:18px">good for 15 minutes. enter it with a new combination to reset.</p>
-    <p style="color:#3a4150;font-size:12px;margin-top:14px">if this wasn't you, ignore it — nothing changes until the code is used.</p>
-  </div>
-</div>`;
-
-  return {
-    subject: `your ${brand.name} reset code ${brand.mark}`,
-    text,
-    html,
-  };
+  return codeEmail({
+    subject: `Your ${brand.name} reset code`,
+    lead: `Hello ${handle}. Here is your ${brand.name} reset code.`,
+    code,
+    after: "It works for 15 minutes. Enter it with a new combination to get back in.",
+    ignore: "If this wasn't you, ignore this email. Nothing changes until the code is used.",
+  });
 }
 
-/** passwordless sign-in / sign-up magic code. */
+/** passwordless sign-in / sign-up code. */
 export function magicCodeEmail(code: string) {
-  const text = `your ${brand.name} sign-in code is ${code}
-
-enter it to open your wardrobe — or to make a new one. it's good for 15 minutes.
-
-if you didn't ask for this, you can ignore it.
-
-${brand.wordmark}`;
-
-  const html = `<div style="font-family:ui-monospace,Menlo,monospace;background:#a9c4f5;padding:32px;color:#14161b">
-  <div style="max-width:440px;margin:0 auto;background:#eef2fb;border-radius:18px;padding:28px 26px;box-shadow:0 18px 40px rgba(36,54,96,.28)">
-    <div style="font-size:20px;letter-spacing:-.02em">${brand.wordmark}</div>
-    <p style="color:#3a4150;margin:14px 0 18px">here's your code — enter it to open your wardrobe, or make a new one.</p>
-    <div style="font-size:30px;font-weight:600;letter-spacing:.18em;text-align:center;padding:18px;border:1px solid rgba(20,22,27,.42);border-radius:12px;background:rgba(169,196,245,.35)">${code}</div>
-    <p style="color:#3a4150;font-size:13px;margin-top:18px">good for 15 minutes.</p>
-    <p style="color:#3a4150;font-size:12px;margin-top:14px">if you didn't ask for this, ignore it.</p>
-  </div>
-</div>`;
-
-  return { subject: `your ${brand.name} sign-in code ${brand.mark}`, text, html };
+  return codeEmail({
+    subject: `Your ${brand.name} sign-in code`,
+    lead: `Here is your ${brand.name} sign-in code.`,
+    code,
+    after: "Enter it to open your wardrobe, or to create one. It works for 15 minutes.",
+    ignore: "If you didn't ask for this, you can ignore this email.",
+  });
 }
 
-/** confirm-this-email code for an existing logged-in account. */
+/** confirm-this-email code for an existing signed-in account. */
 export function verifyEmailCodeEmail(code: string) {
-  const text = `your ${brand.name} confirmation code is ${code}
-
-enter it in the app to attach this email to your wardrobe — so you can sign in
-and recover with it. it's good for 15 minutes.
-
-if you didn't ask for this, you can ignore it.
-
-${brand.wordmark}`;
-
-  const html = `<div style="font-family:ui-monospace,Menlo,monospace;background:#a9c4f5;padding:32px;color:#14161b">
-  <div style="max-width:440px;margin:0 auto;background:#eef2fb;border-radius:18px;padding:28px 26px;box-shadow:0 18px 40px rgba(36,54,96,.28)">
-    <div style="font-size:20px;letter-spacing:-.02em">${brand.wordmark}</div>
-    <p style="color:#3a4150;margin:14px 0 18px">confirm this email to attach it to your wardrobe.</p>
-    <div style="font-size:30px;font-weight:600;letter-spacing:.18em;text-align:center;padding:18px;border:1px solid rgba(20,22,27,.42);border-radius:12px;background:rgba(169,196,245,.35)">${code}</div>
-    <p style="color:#3a4150;font-size:13px;margin-top:18px">good for 15 minutes.</p>
-    <p style="color:#3a4150;font-size:12px;margin-top:14px">if you didn't ask for this, ignore it.</p>
-  </div>
-</div>`;
-
-  return { subject: `confirm your ${brand.name} email ${brand.mark}`, text, html };
+  return codeEmail({
+    subject: `Confirm your ${brand.name} email`,
+    lead: `Here is the code to add this email to your ${brand.name} account.`,
+    code,
+    after: "Enter it in the app so you can sign in and recover your account with this address. It works for 15 minutes.",
+    ignore: "If you didn't ask for this, you can ignore this email.",
+  });
 }
 
 function escapeHtml(s: string) {
