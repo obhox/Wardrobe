@@ -15,10 +15,7 @@ import ItemDetail from "@/components/panels/ItemDetail";
 import ArrangePopover from "@/components/panels/ArrangePopover";
 import BeautifyPanel from "@/components/panels/BeautifyPanel";
 import SharePanel from "@/components/panels/SharePanel";
-import AccountPanel from "@/components/panels/AccountPanel";
 import StatsPanel from "@/components/panels/StatsPanel";
-import WardrobesPanel from "@/components/panels/WardrobesPanel";
-import Toasts from "@/components/ui/Toasts";
 import { STAGE_ID } from "@/lib/screenshot";
 
 export interface StudioUser {
@@ -28,7 +25,16 @@ export interface StudioUser {
   displayCurrency: string;
 }
 
-export default function Studio({ initial, user }: { initial: WardrobePayload; user: StudioUser }) {
+export default function Studio({
+  initial,
+  user,
+  show,
+}: {
+  initial: WardrobePayload;
+  user: StudioUser;
+  /** open on the wishlist view (the Wishlist tab, arriving from another page) */
+  show?: "want";
+}) {
   const init = useStore((s) => s.init);
   const payload = useStore((s) => s.payload);
   const openPanel = useStore((s) => s.openPanel);
@@ -40,8 +46,14 @@ export default function Studio({ initial, user }: { initial: WardrobePayload; us
   // hydrate the store from server props once per wardrobe (Studio is keyed by id)
   useState(() => {
     init(initial);
+    if (show === "want") useStore.getState().setFilter("want");
     return true;
   });
+
+  // the tabs switch views in place from here on, so the address drops the hint
+  useEffect(() => {
+    if (show) window.history.replaceState(null, "", window.location.pathname);
+  }, [show]);
 
   const theme = payload?.wardrobe.theme;
 
@@ -78,7 +90,7 @@ export default function Studio({ initial, user }: { initial: WardrobePayload; us
 
   return (
     <MotionConfig reducedMotion="user">
-      <div className="relative flex h-dvh w-full flex-col overflow-hidden md:flex-row">
+      <div className="relative flex h-full w-full flex-col overflow-hidden md:flex-row">
         {/* mobile: compact top bar with section chips (brief §20: directory on top) */}
         <MobileBar onOpenDirectory={() => setDrawer(true)} />
 
@@ -110,10 +122,8 @@ export default function Studio({ initial, user }: { initial: WardrobePayload; us
         {openPanel === "add" && <AddItem />}
         {openPanel === "beautify" && <BeautifyPanel />}
         {openPanel === "share" && <SharePanel />}
-        {openPanel === "account" && <AccountPanel user={user} />}
         {openPanel === "arrange" && <ArrangePopover />}
         {openPanel === "stats" && <StatsPanel defaultCurrency={user.displayCurrency} />}
-        {openPanel === "wardrobes" && <WardrobesPanel />}
         {selectedId && <ItemDetail />}
 
         {drawer && (
@@ -123,7 +133,6 @@ export default function Studio({ initial, user }: { initial: WardrobePayload; us
             className="fixed inset-0 z-30 bg-black/30 md:hidden"
           />
         )}
-        <Toasts />
       </div>
     </MotionConfig>
   );

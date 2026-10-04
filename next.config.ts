@@ -15,9 +15,14 @@ const storage = origin(process.env.S3_PUBLIC_URL);
 // background-removal model files (see src/lib/cutout.ts)
 const imgly = origin(process.env.NEXT_PUBLIC_IMGLY_PUBLIC_PATH) || "https://staticimgly.com";
 
-// `evalAllowed`: the studio runs in-browser background removal, whose ndarray
-// dependency builds functions with `new Function` — so only /studio pages get
-// 'unsafe-eval'. Everything else (landing, guest share pages) stays stricter.
+// Every screen behind sign-in (src/app/(app)). They share one policy because a
+// policy belongs to the document: moving between them is a client-side route
+// change, so the page you arrived on must already allow what the closet needs.
+const APP_ROUTES = ["/studio", "/studio/:path*", "/you"];
+
+// `evalAllowed`: the closet runs in-browser background removal, whose ndarray
+// dependency builds functions with `new Function` — so only the signed-in app
+// gets 'unsafe-eval'. Everything else (landing, guest share pages) stays stricter.
 const csp = (evalAllowed: boolean) => [
   "default-src 'self'",
   // Next's inline bootstrap needs 'unsafe-inline'; background removal needs
@@ -59,8 +64,7 @@ const nextConfig: NextConfig = {
     // later rules override earlier ones for the same header key
     return [
       { source: "/:path*", headers: securityHeaders() },
-      { source: "/studio", headers: securityHeaders(true) },
-      { source: "/studio/:path*", headers: securityHeaders(true) },
+      ...APP_ROUTES.map((source) => ({ source, headers: securityHeaders(true) })),
     ];
   },
 };

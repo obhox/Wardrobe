@@ -44,7 +44,8 @@ export default function Canvas() {
   const { items, sections, wardrobe } = payload;
   const q = search.trim().toLowerCase();
 
-  function dimmed(it: Item) {
+  // true when the filter, section or search leaves this item out
+  function filteredOut(it: Item) {
     const matchFilter = filter === "all" || it.status === filter;
     const matchSection =
       !activeSection ||
@@ -57,21 +58,26 @@ export default function Canvas() {
     return !(matchFilter && matchSearch && matchSection);
   }
 
-  // board: a real CSS grid that grows and scrolls
+  // board: a real CSS grid that grows and scrolls. What a filter leaves out is
+  // hidden here; the collage dims it instead, so pieces keep their place.
   if (mode === "grid") {
-    const ordered = sortItems(items, wardrobe.sortKey, sections);
+    const shown = sortItems(items, wardrobe.sortKey, sections).filter((it) => !filteredOut(it));
     return (
       <div className="relative h-full w-full overflow-y-auto overflow-x-hidden">
         {items.length === 0 ? (
           <EmptyState />
+        ) : shown.length === 0 ? (
+          <p className="flex h-full items-center justify-center px-6 text-center text-ink-soft">
+            Nothing here matches. Try a different search or filter.
+          </p>
         ) : (
           <ul className="grid grid-cols-[repeat(auto-fill,minmax(148px,1fr))] gap-x-4 gap-y-6 p-4 pb-10 sm:p-6 xl:grid-cols-[repeat(auto-fill,minmax(176px,1fr))] md:gap-x-5 md:gap-y-8 md:p-8">
-            {ordered.map((it, i) => (
+            {shown.map((it, i) => (
               <motion.li
                 key={it.id}
                 layout
                 initial={{ opacity: 0, y: 14 }}
-                animate={{ opacity: dimmed(it) ? 0.3 : 1, y: 0 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: Math.min(i * 0.02, 0.3), duration: 0.3, ease: "easeOut" }}
               >
                 <button
@@ -113,7 +119,7 @@ export default function Canvas() {
               canvasW={size.w}
               canvasH={size.h}
               scale={scale}
-              dimmed={dimmed(it)}
+              dimmed={filteredOut(it)}
             />
           );
         })

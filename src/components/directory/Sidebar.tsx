@@ -68,7 +68,7 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     reorderSections(ids);
   }
 
-  function openPanel(panel: "account" | "stats" | "beautify") {
+  function openPanel(panel: "stats" | "beautify") {
     setPanel(panel);
     onNavigate?.();
   }
@@ -197,9 +197,6 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-rule px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-caption text-ink-soft">
-        <button onClick={() => openPanel("account")} className={footerLink}>
-          Account
-        </button>
         <Notifications />
         {/* on wider screens these two sit in the toolbar above the stage */}
         <button onClick={() => openPanel("stats")} className={cx(footerLink, "md:hidden")}>

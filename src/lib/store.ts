@@ -13,7 +13,7 @@ import type {
 } from "./types";
 
 type Filter = "all" | "owned" | "want";
-type Panel = "add" | "arrange" | "beautify" | "share" | "account" | "stats" | "wardrobes" | null;
+type Panel = "add" | "arrange" | "beautify" | "share" | "stats" | null;
 
 export interface Toast {
   id: number;
@@ -75,7 +75,10 @@ const UNDO_MS = 5000;
 
 // ---- module-level bookkeeping (not render state) ----
 let positionTimer: ReturnType<typeof setTimeout> | null = null;
-const dirtyPositions = new Set<string>();
+// where items were moved to, waiting to be saved. The position is captured
+// here rather than read back later, so a save still sends the right thing after
+// another wardrobe has replaced the payload.
+const dirtyPositions = new Map<string, { posX: number; posY: number; rotation: number }>();
 const pendingDeletes = new Map<string, { url: string; timer: ReturnType<typeof setTimeout> }>();
 let toastSeq = 0;
 
@@ -165,6 +168,12 @@ export const useStore = create<State>((set, get) => {
     dropSection: null,
 
     init: (p) => {
+      // a move made in the wardrobe being left is saved before it is replaced
+      if (positionTimer) {
+        clearTimeout(positionTimer);
+        positionTimer = null;
+        void persistPositions();
+      }
       setStorageBase(p.storageBase);
       set({
         payload: { ...p, sections: recount(p) },
@@ -278,7 +287,7 @@ export const useStore = create<State>((set, get) => {
           ),
         },
       });
-      dirtyPositions.add(id);
+      markMoved([id]);
       schedulePositions();
     },
 
@@ -451,7 +460,7 @@ export const useStore = create<State>((set, get) => {
           }),
         },
       });
-      for (const id of placements.keys()) dirtyPositions.add(id);
+      markMoved(placements.keys());
       schedulePositions(0);
       get().toast("Tidied up", {
         undo: () => {
@@ -467,7 +476,7 @@ export const useStore = create<State>((set, get) => {
               }),
             },
           });
-          for (const id of old.keys()) dirtyPositions.add(id);
+          markMoved(old.keys());
           schedulePositions(0);
         },
       });
@@ -497,18 +506,22 @@ export const useStore = create<State>((set, get) => {
     }, delay);
   }
 
+  function markMoved(ids: Iterable<string>) {
+    const moved = new Set(ids);
+    for (const it of get().payload?.items ?? []) {
+      if (moved.has(it.id)) dirtyPositions.set(it.id, { posX: it.posX, posY: it.posY, rotation: it.rotation });
+    }
+  }
+
   async function persistPositions() {
-    const items = get().payload?.items ?? [];
-    const ids = new Set(dirtyPositions);
+    const positions = [...dirtyPositions].map(([id, pos]) => ({ id, ...pos }));
     dirtyPositions.clear();
-    const positions = items
-      .filter((it) => ids.has(it.id))
-      .map((it) => ({ id: it.id, posX: it.posX, posY: it.posY, rotation: it.rotation }));
     try {
       // keepalive so a save started on page hide still completes
       if (positions.length) await api.patch("/api/items/positions", { positions }, { keepalive: true });
     } catch {
-      for (const id of ids) dirtyPositions.add(id); // retry with the next save
+      // retry with the next save, unless the item has moved again since
+      for (const { id, ...pos } of positions) if (!dirtyPositions.has(id)) dirtyPositions.set(id, pos);
       get().toast("Couldn't save positions. Will retry.", { tone: "error" });
     } finally {
       set({ saving: false });

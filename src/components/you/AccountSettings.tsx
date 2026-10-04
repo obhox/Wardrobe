@@ -6,10 +6,8 @@ import { useStore } from "@/lib/store";
 import { api } from "@/lib/api";
 import { CURRENCIES } from "@/lib/currency";
 import { RefreshCw } from "lucide-react";
-import Dialog from "@/components/ui/Dialog";
 import { Button, IconButton, buttonClass } from "@/components/ui/Button";
 import { FormField, Input, Select } from "@/components/ui/Field";
-import type { StudioUser } from "@/app/studio/Studio";
 
 type Me = {
   handle: string;
@@ -30,9 +28,10 @@ function deviceName(ua: string | null) {
 
 const when = (d: string) => new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 
-export default function AccountPanel({ user }: { user: StudioUser }) {
+// Ways to sign in, the currency totals are shown in, signed-in devices, and
+// the export and delete controls.
+export default function AccountSettings({ handle, displayCurrency }: { handle: string; displayCurrency: string }) {
   const router = useRouter();
-  const setPanel = useStore((s) => s.setPanel);
   const reset = useStore((s) => s.reset);
   const flush = useStore((s) => s.flush);
   const toast = useStore((s) => s.toast);
@@ -61,8 +60,6 @@ export default function AccountPanel({ user }: { user: StudioUser }) {
     const t = setTimeout(load, 0);
     return () => clearTimeout(t);
   }, [load]);
-
-  const close = () => setPanel(null);
 
   async function signOut() {
     await flush();
@@ -108,9 +105,9 @@ export default function AccountPanel({ user }: { user: StudioUser }) {
   const rowLink = "shrink-0 text-ink-soft underline underline-offset-4 hover:text-danger";
 
   return (
-    <Dialog title="Account" variant="sheet" onClose={close}>
+    <div>
       <FormField label="Handle">
-        <div className="flex h-10 items-center rounded-control bg-wash px-3 font-mono">@{user.handle}</div>
+        <div className="flex h-10 items-center rounded-control bg-wash px-3 font-mono">@{handle}</div>
         <p className="mt-1.5 text-caption text-ink-soft">Your public name. You sign in with it.</p>
       </FormField>
 
@@ -146,7 +143,7 @@ export default function AccountPanel({ user }: { user: StudioUser }) {
       <FormField label="Show totals in" htmlFor="account-currency" className="mt-7">
         <Select
           id="account-currency"
-          value={me?.displayCurrency ?? user.displayCurrency}
+          value={me?.displayCurrency ?? displayCurrency}
           onChange={async (e) => {
             const displayCurrency = e.target.value;
             setMe((m) => (m ? { ...m, displayCurrency } : m));
@@ -202,8 +199,8 @@ export default function AccountPanel({ user }: { user: StudioUser }) {
         </Button>
       </div>
 
-      <DeleteAccount handle={user.handle} onDeleted={() => { reset(); router.replace("/"); router.refresh(); }} />
-    </Dialog>
+      <DeleteAccount handle={handle} onDeleted={() => { reset(); router.replace("/"); router.refresh(); }} />
+    </div>
   );
 }
 

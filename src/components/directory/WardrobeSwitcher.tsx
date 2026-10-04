@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronsUpDown, Plus } from "lucide-react";
 import { useStore } from "@/lib/store";
@@ -11,7 +12,6 @@ export default function WardrobeSwitcher({ onNavigate }: { onNavigate?: () => vo
   const router = useRouter();
   const wardrobe = useStore((s) => s.payload?.wardrobe);
   const wardrobes = useStore((s) => s.payload?.wardrobes);
-  const setPanel = useStore((s) => s.setPanel);
   const flush = useStore((s) => s.flush);
   const toast = useStore((s) => s.toast);
   const [open, setOpen] = useState(false);
@@ -93,16 +93,9 @@ export default function WardrobeSwitcher({ onNavigate }: { onNavigate?: () => vo
             >
               <Plus aria-hidden className="h-3.5 w-3.5" /> New wardrobe
             </button>
-            <button
-              onClick={() => {
-                setOpen(false);
-                setPanel("wardrobes");
-                onNavigate?.();
-              }}
-              className="flex-1 rounded-control px-2 py-2 hover:bg-ink/4"
-            >
+            <Link href="/you" className="flex-1 rounded-control px-2 py-2 text-center hover:bg-ink/4">
               Manage
-            </button>
+            </Link>
           </div>
         </div>
       )}

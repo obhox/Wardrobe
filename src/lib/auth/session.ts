@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { cookies, headers } from "next/headers";
 import { prisma } from "@/lib/db";
 import { randomToken, sha256 } from "./crypto";
@@ -49,7 +50,8 @@ export interface SessionUser {
   sessionId: string;
 }
 
-export async function getCurrentUser(): Promise<SessionUser | null> {
+// cached per request: the app layout and the page under it both ask who is signed in
+export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
   const jar = await cookies();
   const token = jar.get(COOKIE)?.value;
   if (!token) return null;
@@ -80,7 +82,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     lastWardrobeId: user.lastWardrobeId,
     sessionId: session.id,
   };
-}
+});
 
 export async function requireUser(): Promise<SessionUser> {
   const user = await getCurrentUser();

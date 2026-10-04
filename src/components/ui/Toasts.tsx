@@ -14,7 +14,7 @@ export default function Toasts() {
     <div
       data-noshot="true"
       aria-live="polite"
-      className="pointer-events-none fixed inset-x-0 bottom-[max(1rem,env(safe-area-inset-bottom))] z-[70] flex flex-col items-center gap-2 px-3"
+      className="pointer-events-none fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-[70] flex flex-col items-center gap-2 px-3 md:bottom-4"
     >
       <AnimatePresence initial={false}>
         {toasts.map((t) => (

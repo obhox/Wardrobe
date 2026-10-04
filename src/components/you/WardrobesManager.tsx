@@ -5,7 +5,7 @@ import { ArrowDown, ArrowUp } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { api } from "@/lib/api";
 import { cx } from "@/lib/cx";
-import Dialog from "@/components/ui/Dialog";
+import type { WardrobeSummary } from "@/lib/types";
 import { Button, IconButton } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { FormField, Input } from "@/components/ui/Field";
@@ -17,13 +17,10 @@ const TEMPLATES = [
   { id: "blank", label: "Blank", hint: "No sections" },
 ];
 
-// Create, reorder, duplicate and delete wardrobes.
-export default function WardrobesPanel() {
+// Open, create, reorder, duplicate and delete wardrobes.
+export default function WardrobesManager({ wardrobes, currentId }: { wardrobes: WardrobeSummary[]; currentId: string | null }) {
   const router = useRouter();
-  const setPanel = useStore((s) => s.setPanel);
   const flush = useStore((s) => s.flush);
-  const current = useStore((s) => s.payload?.wardrobe.id);
-  const wardrobes = useStore((s) => s.payload?.wardrobes ?? []);
   const [title, setTitle] = useState("");
   const [template, setTemplate] = useState("closet");
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -32,14 +29,11 @@ export default function WardrobesPanel() {
   const [busy, setBusy] = useState(false);
   const [order, setOrder] = useState(wardrobes.map((w) => w.id));
 
-  const close = () => setPanel(null);
   const byId = new Map(wardrobes.map((w) => [w.id, w]));
 
   async function go(id: string) {
     await flush();
-    setPanel(null);
     router.push(`/studio/${id}`);
-    router.refresh();
   }
 
   async function act(fn: () => Promise<void>) {
@@ -65,7 +59,7 @@ export default function WardrobesPanel() {
   const link = "underline underline-offset-4 hover:text-ink disabled:opacity-40";
 
   return (
-    <Dialog title="Your wardrobes" variant="sheet" onClose={close}>
+    <div>
       <ul className="space-y-2">
         {order.map((id, i) => {
           const w = byId.get(id);
@@ -77,7 +71,7 @@ export default function WardrobesPanel() {
                   <button onClick={() => go(id)} className="flex min-w-0 flex-1 items-baseline gap-2 py-1 text-left hover:underline">
                     <span className="cap-first truncate font-medium">{w.title}</span>
                     <span className="label-caps tabular shrink-0 text-ink-faint">{w.count}</span>
-                    {id === current && <span className="label-caps shrink-0 text-ink-faint">Open</span>}
+                    {id === currentId && <span className="label-caps shrink-0 text-ink-faint">Last opened</span>}
                   </button>
                   <IconButton label={`Move ${w.title} up`} size="sm" disabled={i === 0} onClick={() => move(i, -1)}>
                     <ArrowUp aria-hidden className="h-4 w-4" />
@@ -116,13 +110,9 @@ export default function WardrobesPanel() {
                         onClick={() =>
                           act(async () => {
                             await api.del(`/api/wardrobes/${id}`, { confirm });
-                            const next = order.find((o) => o !== id)!;
-                            if (id === current) await go(next);
-                            else {
-                              setOrder(order.filter((o) => o !== id));
-                              setDeleting(null);
-                              router.refresh();
-                            }
+                            setOrder(order.filter((o) => o !== id));
+                            setDeleting(null);
+                            router.refresh();
                           })
                         }
                       >
@@ -172,6 +162,6 @@ export default function WardrobesPanel() {
           {err}
         </p>
       )}
-    </Dialog>
+    </div>
   );
 }

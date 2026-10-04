@@ -3,7 +3,7 @@
 > your closet, digitized and made beautiful.
 
 A personal closet canvas. Add the things you own (and a few you still want), and
-they float on a calm, monospace canvas you can arrange, section, and decorate.
+they sit on a calm canvas you can arrange, section, and theme.
 Built from the project brief (`wardrobe-brief.md`).
 
 **Stack:** Next.js (App Router) · TypeScript · Tailwind v4 · Prisma · PostgreSQL ·
@@ -50,7 +50,7 @@ docker compose up --build     # Postgres + MinIO + app, migrations run on boot
    server; a failed migration stops the deploy instead of serving a broken schema.
    Health check: `/api/health`.
 5. Schedule price checks (every ~6 hours is fine — each run only rechecks items
-   whose price is more than 30 days old, up to 40 at a time):
+   whose price is more than a day old, up to 40 at a time):
    `curl -fsS -X POST -H "authorization: Bearer $CRON_SECRET" https://<app>/api/cron/prices`
 
 ### Upgrading an existing database (first deploy of v0.3)
@@ -102,20 +102,27 @@ src/
   proxy.ts                    cross-site write guard (Next 16 "proxy")
   app/
     page.tsx                  landing → sign in
-    studio/[id]/              one wardrobe's canvas (auth-gated); /studio → last opened
+    (app)/                    everything behind sign-in, inside the app shell (tab bar / rail)
+      studio/[id]/            one wardrobe's canvas; /studio → last opened
+      you/                    wardrobes and account
     w/[code]/                 read-only guest view (per-wardrobe share link)
+    styleguide/               tokens and component kit on one page (development only)
     api/
       auth/…                  login · register · email codes · recover · passkeys · sessions · combination
-      wardrobes · items · sections · stickers · upload · img · scrape · stats · notifications
+      wardrobes · items · sections · upload · img · scrape · stats · notifications
       cron/prices             price checker (Bearer CRON_SECRET)
       account                 export / delete
   components/
-    ui/                       Dialog (focus trap, Esc), Toasts (undo), controls
-    canvas/                   Canvas · Cutout · Sticker · GalleryCard · EmptyState
+    ui/                       the kit: Button · Field · Chip · Segmented · Switch · Card ·
+                              Dialog (focus trap, Esc) · Toasts (undo)
+    shell/                    AppShell (tab bar on phones, rail on wider screens)
+    item/                     ItemTile (one tile for the owner's board and the guest page) · GuestItems
+    canvas/                   Canvas · Cutout · Toolbar · EmptyState
     directory/                Sidebar · SectionRow · WardrobeSwitcher · MobileBar · Notifications
-    panels/                   AddItem · ItemDetail · Arrange · Beautify · Share · Account · Stats · Wardrobes
+    panels/                   AddItem · ItemDetail · Arrange · Appearance · Share · Stats
+    you/                      WardrobesManager · AccountSettings
   lib/
-    store (zustand) · layout · color · ground · cutout · img · api · hooks
+    store (zustand) · layout · theme · nav · brand · color · cutout · img · api · hooks
     server/                   safe-fetch (SSRF guard) · storage (S3) · images (sharp) · scrape ·
                               price-check · fx · schemas (zod) · http helpers
     auth/                     combination · crypto · session · challenge · rate-limit · mailer
@@ -123,10 +130,10 @@ prisma/                       schema + migrations
 scripts/                      one-off data migrations
 ```
 
-- **Arrange**: grid, shelves, columns and the scrolling grid are computed at render
-  time (`lib/layout.ts`), so switching layouts never overwrites your hand-made
-  collage. Only free mode stores positions (0..1 fractions); drags save debounced,
-  sending only what moved.
+- **Arrange**: two layouts. The board is a scrolling grid that flows items at
+  render time, so switching to it never overwrites your hand-made collage. Only
+  the collage stores positions (0..1 fractions); drags save debounced, sending
+  only what moved. Phones always get the board.
 - **Background removal** runs in the browser (`@imgly/background-removal`,
   `lib/cutout.ts`). The model downloads once from imgly's CDN (set
   `NEXT_PUBLIC_IMGLY_PUBLIC_PATH` to self-host). Every add previews the cutout
@@ -151,8 +158,12 @@ scripts/                      one-off data migrations
   in the studio asks whether to convert the amounts (moving the history with
   them) or just relabel a currency that was detected wrongly.
 - **Stats** convert every price into your display currency (daily FX rates).
-- **Theming** is CSS variables switched by `data-ground`/`data-accent`; custom
-  hex grounds derive readable ink, panel and shadow tokens (`lib/ground.ts`).
+- **Theming**: a wardrobe has one curated theme (`lib/theme.ts`), set with
+  `data-theme` on the stage its items sit on; the rest of the app stays neutral.
+  Tokens (colour, type scale, corners, elevations) live in `app/globals.css`, and
+  the fonts are self-hosted from `app/fonts/`.
+- **Brand**: the product name, mark, tagline and production origin come from
+  `brand.json`, read by the app, the emails and the extension build.
 
 ## Scripts
 
@@ -161,6 +172,7 @@ scripts/                      one-off data migrations
 | `npm run dev` | dev server |
 | `npm run build` | `prisma generate` + `next build` |
 | `npm start` | production server |
+| `npm run lint` · `npm run typecheck` · `npm test` | ESLint, TypeScript, and the unit tests (vitest) |
 | `npm run db:migrate:dev` | create a new migration after editing the schema |
 | `npm run db:migrate` | apply migrations (`migrate deploy`) |
 | `npm run db:seed` | seed the demo wardrobe |

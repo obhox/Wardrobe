@@ -13,10 +13,17 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function StudioPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function StudioPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ show?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect("/");
   const { id } = await params;
+  const { show } = await searchParams;
 
   const payload = await loadWardrobe(user.id, id);
   if (!payload) redirect("/studio");
@@ -29,6 +36,7 @@ export default async function StudioPage({ params }: { params: Promise<{ id: str
     <Studio
       key={id}
       initial={payload}
+      show={show === "want" ? "want" : undefined}
       user={{ id: user.id, email: user.email, handle: user.handle, displayCurrency: user.displayCurrency }}
     />
   );
