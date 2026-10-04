@@ -1,7 +1,12 @@
--- Curated themes replace ground + pattern + accent, and the removed layouts
--- fold into the board. This migration only adds and backfills: the old columns,
--- the "Sticker" table and the unused "LayoutMode" values stay, so the previous
--- release keeps working while this one rolls out. A follow-up migration drops them.
+-- Curated themes replace ground + pattern + accent. This migration only adds:
+-- it creates "Wardrobe"."theme" and fills it from each wardrobe's ground. No
+-- existing value is changed, so the previous release keeps working while this
+-- one rolls out, and rolling back needs no data repair.
+--
+-- Left for the follow-up migration, once this release is settled: dropping
+-- "ground"/"pattern"/"accent" and the "Sticker" table, moving removed layouts
+-- to 'grid' and shrinking the "LayoutMode" enum. Until then the app reads old
+-- layout and theme values through toLayoutMode() and toThemeId().
 
 -- AlterTable
 ALTER TABLE "User" ALTER COLUMN "defaultTheme" SET DEFAULT 'paper';
@@ -24,20 +29,3 @@ UPDATE "Wardrobe" SET "theme" = CASE
          THEN 'ink' ELSE 'paper' END
   ELSE 'paper'
 END;
-
--- The same for the theme a person's new wardrobes start with.
-UPDATE "User" SET "defaultTheme" = CASE
-  WHEN "defaultTheme" IN ('bone', 'sage', 'butter') THEN "defaultTheme"
-  WHEN "defaultTheme" = 'daylight' THEN 'mist'
-  WHEN "defaultTheme" = 'bubblegum' THEN 'rose'
-  WHEN "defaultTheme" = 'slate' THEN 'ink'
-  WHEN "defaultTheme" ~ '^#[0-9A-Fa-f]{6}$' THEN
-    CASE WHEN get_byte(decode(substr("defaultTheme", 2), 'hex'), 0) * 0.2126
-            + get_byte(decode(substr("defaultTheme", 2), 'hex'), 1) * 0.7152
-            + get_byte(decode(substr("defaultTheme", 2), 'hex'), 2) * 0.0722 < 128
-         THEN 'ink' ELSE 'paper' END
-  ELSE 'paper'
-END;
-
--- Shelves, columns and the old gallery all become the board.
-UPDATE "Wardrobe" SET "layoutMode" = 'grid' WHERE "layoutMode"::text NOT IN ('free', 'grid');

@@ -7,7 +7,7 @@ describe("toThemeId", () => {
     for (const t of THEMES) expect(toThemeId(t.id)).toBe(t.id);
   });
 
-  // mirrors the backfill in the curated_themes migration
+  // the same mapping the curated_themes migration uses to fill Wardrobe.theme
   it.each([
     ["daylight", "mist"],
     ["bubblegum", "rose"],

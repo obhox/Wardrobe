@@ -25,8 +25,9 @@ enum SourceType {
 enum LayoutMode {
   free // the hand-placed collage
   grid // the scrolling board
-  // deprecated: removed layouts. No row holds them any more and nothing writes
-  // them; the values go in the follow-up migration.
+  // deprecated: removed layouts. Nothing writes them; rows that still hold one
+  // read as the board (toLayoutMode). The follow-up migration moves those rows
+  // to grid and drops the values.
   shelves
   columns
   gallery
