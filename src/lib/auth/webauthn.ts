@@ -1,5 +1,6 @@
 import "server-only";
 import { env } from "@/lib/env";
+import { brand } from "@/lib/brand";
 
 // WebAuthn / passkey configuration (brief §24 "the second turn").
 // rpID must match the site's domain; origin must match the full URL.
@@ -10,7 +11,7 @@ export function rpID(): string {
 }
 
 export function rpName(): string {
-  return "wardrobe";
+  return brand.name;
 }
 
 export function expectedOrigin(): string {

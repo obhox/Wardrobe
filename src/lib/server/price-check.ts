@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import type { Item } from "@prisma/client";
 import { formatMoney } from "@/lib/currency";
 import { mailerConfigured, sendMail } from "@/lib/auth/mailer";
+import { brand } from "@/lib/brand";
 import { scrapeProduct } from "./scrape";
 import { convertAmount, normalizeCurrency, roundMoney } from "./fx";
 
@@ -213,7 +214,7 @@ async function sendDigests(): Promise<number> {
       await sendMail({
         to,
         subject: notes.length === 1 ? `✦ ${notes[0].body}` : `✦ ${notes.length} price drops on your wishlist`,
-        text: `${lines}\n\nopen your wardrobe to take a look.\n\nturn alerts off for an item from its detail card.\n\n✦ wardrobe`,
+        text: `${lines}\n\nopen your wardrobe to take a look.\n\nturn alerts off for an item from its detail card.\n\n${brand.wordmark}`,
       });
       await prisma.notification.updateMany({
         where: { id: { in: notes.map((n) => n.id) } },

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { unauthorized } from "@/lib/server/http";
+import { brand } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,7 @@ export async function GET() {
   return new NextResponse(body, {
     headers: {
       "content-type": "application/json; charset=utf-8",
-      "content-disposition": `attachment; filename="wardrobe-${me.handle}.json"`,
+      "content-disposition": `attachment; filename="${brand.slug}-${me.handle}.json"`,
       "cache-control": "no-store",
     },
   });

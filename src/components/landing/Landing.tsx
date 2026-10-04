@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import CombinationLock from "@/components/auth/CombinationLock";
+import { brand } from "@/lib/brand";
 
 /* ------------------------------------------------------------------ *
  *  wardrobe — landing page
@@ -129,7 +130,7 @@ export default function Landing() {
                 <span className="h-2.5 w-2.5 rounded-full bg-ink/15" />
               </div>
               <div className="mx-auto rounded-md bg-ground/50 px-10 py-1 text-[11px] lowercase text-ink-soft">
-                wardrobe.obhox.com/studio
+                {brand.host}/studio
               </div>
               <div className="w-[42px]" aria-hidden />
             </div>

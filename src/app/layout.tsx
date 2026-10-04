@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import { brand } from "@/lib/brand";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "wardrobe",
-  description: "your closet, digitized and made beautiful.",
+  title: brand.name,
+  description: brand.tagline,
 };
 
 export const viewport: Viewport = {

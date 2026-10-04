@@ -2,6 +2,7 @@ import "server-only";
 import dns from "node:dns";
 import net from "node:net";
 import { Agent, fetch as undiciFetch } from "undici";
+import { brand } from "@/lib/brand";
 
 // Outbound fetch for user-supplied URLs (link previews, image proxy, price
 // checks, image ingest). Guards against SSRF:
@@ -108,8 +109,7 @@ const agent = new Agent({
   bodyTimeout: 15_000,
 });
 
-export const BROWSER_UA =
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36 wardrobe/1.0";
+export const BROWSER_UA = `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36 ${brand.slug}/1.0`;
 
 export interface SafeResponse {
   status: number;

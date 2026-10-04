@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { brand } from "@/lib/brand";
 
 export const metadata: Metadata = {
-  title: "privacy · wardrobe",
+  title: `privacy · ${brand.name}`,
   description: "what wardrobe and the wardrobe browser extension do with your data.",
 };
 
@@ -47,11 +48,11 @@ export default function Privacy() {
           <li>
             nothing is sent anywhere until you press <b>add ✦</b>. then the item you confirmed (name,
             brand, price, photo link, the page&apos;s link, and anything you typed) is saved to your
-            wardrobe at wardrobe.obhox.com.
+            wardrobe at {brand.host}.
           </li>
           <li>
             photo previews and the colour used for &quot;arrange by color&quot; are loaded through
-            wardrobe.obhox.com&apos;s image proxy.
+            {brand.host}&apos;s image proxy.
           </li>
           <li>
             it uses your existing wardrobe sign-in; it never sees or stores your combination or passkey.
